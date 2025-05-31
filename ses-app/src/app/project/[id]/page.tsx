@@ -8,10 +8,25 @@ const dummyProjects = [
     price: 700000,
     periodStart: '2024-06-01',
     periodEnd: '2024-12-31',
-    skills: 'React,Next.js,TypeScript',
-    location: '東京都・リモート可',
-    description: '大手Webサービスのフロントエンド開発案件です。',
+    description: `大手Webサービスのフロントエンド開発案件です。
+
+【必要スキル】
+・React
+・Next.js
+・TypeScript
+
+【勤務地】
+東京都・リモート可`,
     status: '募集中',
+    published: true,
+    publishedAt: '2024-03-01T00:00:00Z',
+    lastContactedAt: null,
+    createdAt: '2024-03-01T00:00:00Z',
+    updatedAt: '2024-03-01T00:00:00Z',
+    deletedAt: null,
+    isActive: true,
+    createdBy: 'admin-user-id',
+    updatedBy: 'admin-user-id'
   },
   {
     id: '2b222222-2222-2222-2222-222222222222',
@@ -19,10 +34,17 @@ const dummyProjects = [
     price: 800000,
     periodStart: '2024-07-01',
     periodEnd: '2025-01-31',
-    skills: 'AWS,Terraform,CI/CD',
-    location: 'フルリモート',
     description: 'クラウドインフラの設計・構築・運用案件です。',
     status: '募集中',
+    published: true,
+    publishedAt: '2024-03-01T00:00:00Z',
+    lastContactedAt: null,
+    createdAt: '2024-03-01T00:00:00Z',
+    updatedAt: '2024-03-01T00:00:00Z',
+    deletedAt: null,
+    isActive: true,
+    createdBy: 'admin-user-id',
+    updatedBy: 'admin-user-id'
   },
   {
     id: '3c333333-3333-3333-3333-333333333333',
@@ -30,10 +52,17 @@ const dummyProjects = [
     price: 650000,
     periodStart: '2024-06-15',
     periodEnd: '2024-09-30',
-    skills: 'Python,Pandas,SQL',
-    location: '大阪府・一部リモート',
     description: '製造業向けデータ分析・可視化案件です。',
     status: '募集中',
+    published: true,
+    publishedAt: '2024-03-01T00:00:00Z',
+    lastContactedAt: null,
+    createdAt: '2024-03-01T00:00:00Z',
+    updatedAt: '2024-03-01T00:00:00Z',
+    deletedAt: null,
+    isActive: true,
+    createdBy: 'admin-user-id',
+    updatedBy: 'admin-user-id'
   },
 ];
 
@@ -66,11 +95,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         <div className="mb-2 text-blue-700 text-base">
           {formatDateJp(project.periodStart)} ~ {formatDateJp(project.periodEnd)}
         </div>
-        <div className="mb-2 text-gray-700">{project.location}</div>
         <div className="mb-4 text-gray-700 whitespace-pre-line break-words">{project.description}</div>
         <div className="mb-4 flex items-center gap-2">
           <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-700 border border-blue-300">{project.status}</span>
-          <span className="inline-block px-3 py-1 text-xs rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-semibold">{project.skills}</span>
         </div>
         <Link href="/project" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded font-bold hover:bg-blue-700 transition text-sm">一覧に戻る</Link>
       </div>
