@@ -40,8 +40,6 @@ model Project {
   price            Int
   periodStart      DateTime
   periodEnd        DateTime
-  skills           String   // カンマ区切り
-  location         String
   description      String
   status           String
   published        Boolean   @default(true)
