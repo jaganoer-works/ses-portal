@@ -106,6 +106,12 @@ alwaysApply: true
 
 ---
 
+# データモデル設計書
+
+@datamodel.md
+
+---
+
 # 要件定義書
 
 @requirements.md
