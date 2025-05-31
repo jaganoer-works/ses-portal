@@ -75,7 +75,7 @@ interface ProjectDetailPageProps {
   params: { id: string };
 }
 
-export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+export default async function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const project = dummyProjects.find((p) => p.id === params.id);
 
   if (!project) {
