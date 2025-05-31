@@ -31,11 +31,12 @@ SES（システムエンジニアリングサービス）の案件情報と技�
 - ログイン（メールアドレス・パスワード）
 - ログアウト
 
-## 3. 技術スタック（案）
-- バックエンド：Node.js, Python, Ruby, など（@technologystack.mdに準拠）
-- フロントエンド：React, Vue, など（@technologystack.mdに準拠）
-- データベース：MySQL, PostgreSQL, MongoDB, など（@technologystack.mdに準拠）
-- 認証：メール認証、OAuth, など（@technologystack.mdに準拠）
+## 3. 技術スタック（MVP最小構成）
+- フロントエンド/バックエンド：Next.js（API Routes含む）
+- データベース：SQLite（Prisma経由で操作）
+- ORM：Prisma
+- 認証：NextAuth.js
+- デプロイ：Vercel
 
 ## 4. 画面イメージ（案）
 - 案件一覧画面（案件名、単価、期間、スキル要件、勤務地、ステータス）
