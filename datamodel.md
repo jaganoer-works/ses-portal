@@ -31,8 +31,6 @@ erDiagram
       INT price
       DATETIME periodStart
       DATETIME periodEnd
-      STRING[] skills
-      STRING location
       STRING description
       STRING status
       BOOLEAN published
@@ -102,9 +100,7 @@ erDiagram
 | price            | Int        | 単価                       |
 | periodStart      | DateTime   | 開始日                     |
 | periodEnd        | DateTime   | 終了日                     |
-| skills           | String[]   | スキル要件（配列）         |
-| location         | String     | 勤務地                     |
-| description      | String     | 案件詳細                   |
+| description      | String     | 案件詳細（自由記述欄。要件・条件・備考などをまとめて記載） |
 | status           | String     | 募集中/マッチング済/終了   |
 | published        | Boolean    | 公開/非公開                |
 | publishedAt      | DateTime?  | 公開日時                   |
@@ -115,6 +111,8 @@ erDiagram
 | isActive         | Boolean    | 有効/無効                  |
 | createdBy        | String?    | 作成者ID（User.id）        |
 | updatedBy        | String?    | 更新者ID（User.id）        |
+
+> **備考**: 案件の詳細情報（要件、条件、備考、連絡先など）は、`description`（自由記述欄）にまとめて記載し、将来的な項目追加や仕様変更にも柔軟に対応できるようにしています。
 
 ---
 
