@@ -1,0 +1,83 @@
+// Prisma schema for SES案件・技術者管理アプリ MVP
+// SQLite用
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  skills        String   // カンマ区切り
+  desiredPrice  Int
+  availableFrom DateTime
+  description   String
+  status        String
+  lastLoginAt   DateTime?
+  isAvailable   Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isActive      Boolean   @default(true)
+
+  // Relations
+  projectsCreated   Project[]   @relation("ProjectCreatedBy")
+  projectsUpdated   Project[]   @relation("ProjectUpdatedBy")
+  interactionsEngineer Interaction[] @relation("InteractionEngineer")
+  interactionsCreated Interaction[] @relation("InteractionCreatedBy")
+  interactionsUpdated Interaction[] @relation("InteractionUpdatedBy")
+}
+
+model Project {
+  id               String    @id @default(uuid())
+  title            String
+  price            Int
+  periodStart      DateTime
+  periodEnd        DateTime
+  skills           String   // カンマ区切り
+  location         String
+  description      String
+  status           String
+  published        Boolean   @default(true)
+  publishedAt      DateTime?
+  lastContactedAt  DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+  isActive         Boolean   @default(true)
+  createdById      String?
+  updatedById      String?
+
+  // Relations
+  createdBy        User?     @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  updatedBy        User?     @relation("ProjectUpdatedBy", fields: [updatedById], references: [id])
+  interactions     Interaction[]
+}
+
+model Interaction {
+  id          String   @id @default(uuid())
+  projectId   String
+  engineerId  String
+  message     String
+  progress    String
+  isRead      Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  isActive    Boolean  @default(true)
+  createdById String?
+  updatedById String?
+
+  // Relations
+  project     Project  @relation(fields: [projectId], references: [id])
+  engineer    User     @relation("InteractionEngineer", fields: [engineerId], references: [id])
+  createdBy   User?    @relation("InteractionCreatedBy", fields: [createdById], references: [id])
+  updatedBy   User?    @relation("InteractionUpdatedBy", fields: [updatedById], references: [id])
+} 
