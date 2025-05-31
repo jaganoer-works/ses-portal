@@ -106,6 +106,12 @@ alwaysApply: true
 
 ---
 
+# 要件定義書
+
+@requirements.md
+
+---
+
 # 技術スタック
 
 @technologystack.md
@@ -115,5 +121,11 @@ alwaysApply: true
 # ディレクトリ構成
 
 @directorystructure.md
+
+---
+
+# Git運用ルール
+
+@git_rules.md
 
 以上の指示に従い、確実で質の高い実装を行います。指示された範囲内でのみ処理を行い、不要な追加実装は行いません。不明点や重要な判断が必要な場合は、必ず確認を取ります。
