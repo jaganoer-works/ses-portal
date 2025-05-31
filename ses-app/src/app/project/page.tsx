@@ -1,3 +1,4 @@
+import Link from "next/link";
 // import { PrismaClient } from '@prisma/client';
 
 // const prisma = new PrismaClient();
@@ -48,31 +49,19 @@ export default function ProjectListPage() {
   return (
     <main className="p-8 bg-gradient-to-br from-blue-50 to-white min-h-screen">
       <h1 className="text-3xl font-bold mb-8 text-blue-900">案件一覧</h1>
-      <div className="overflow-x-auto shadow-lg rounded-lg">
-        <table className="min-w-full bg-white border border-blue-200 rounded-lg overflow-hidden">
-          <thead className="bg-blue-100">
-            <tr>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">案件名</th>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">単価</th>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">期間</th>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">スキル</th>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">勤務地</th>
-              <th className="py-2 px-4 border-b border-blue-200 text-blue-800">ステータス</th>
-            </tr>
-          </thead>
-          <tbody>
-            {projects.map((project) => (
-              <tr key={project.id} className="hover:bg-blue-50 transition-colors">
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-900 font-medium">{project.title}</td>
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-700">{project.price.toLocaleString()}円/月</td>
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-700">{formatDate(project.periodStart)} ~ {formatDate(project.periodEnd)}</td>
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-700">{project.skills}</td>
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-700">{project.location}</td>
-                <td className="py-2 px-4 border-b border-blue-100 text-blue-700">{project.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {projects.map((project) => (
+          <div key={project.id} className="bg-white border border-blue-200 rounded-xl shadow-md p-6 flex flex-col hover:shadow-lg transition">
+            <h2 className="text-xl font-bold text-blue-900 mb-2">{project.title}</h2>
+            <div className="text-blue-700 mb-1 font-semibold">{project.price.toLocaleString()}円/月</div>
+            <div className="text-sm text-blue-600 mb-2">{formatDate(project.periodStart)} ~ {formatDate(project.periodEnd)}</div>
+            <div className="text-gray-700 mb-2 whitespace-pre-line break-words">{project.description}</div>
+            <div className="mt-auto flex justify-between items-end">
+              <span className="inline-block px-3 py-1 text-xs font-bold rounded-full bg-blue-100 text-blue-800">{project.status}</span>
+              <Link href={`/project/${project.id}`} className="ml-2 px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded hover:bg-blue-700 transition">詳細を見る</Link>
+            </div>
+          </div>
+        ))}
       </div>
     </main>
   );
