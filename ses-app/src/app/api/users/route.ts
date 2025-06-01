@@ -23,30 +23,52 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
+    console.log("受信したデータ:", data); // デバッグ用
+    
     const parsed = userSchema.safeParse(data);
     if (!parsed.success) {
+      console.log("バリデーションエラー:", parsed.error.errors); // デバッグ用
       const errors = parsed.error.errors.map(err => ({
         field: err.path.join("."),
         message: err.message,
       }));
       return apiError(errors, HTTP_STATUS.BAD_REQUEST);
     }
+    
     const prismaData = toPrismaNull(parsed.data);
+    
+    // スキルの処理を改善
+    const skillConnections = parsed.data.skills
+      ? await Promise.all(
+          parsed.data.skills.map(async (skillName: string) => {
+            // スキルが存在しない場合は作成
+            const skill = await prisma.skill.upsert({
+              where: { name: skillName },
+              update: {},
+              create: { name: skillName },
+            });
+            return { skillId: skill.id };
+          })
+        )
+      : [];
+
     const user = await prisma.user.create({
       data: {
         ...prismaData,
-        skills: parsed.data.skills
+        skills: skillConnections.length > 0
           ? {
-              create: parsed.data.skills.map((skillName: string) => ({
-                skill: { connect: { name: skillName } },
+              create: skillConnections.map(({ skillId }) => ({
+                skillId,
               })),
             }
           : undefined,
       } as any,
       include: { skills: { include: { skill: true } } },
     });
+    
     return NextResponse.json(user, { status: HTTP_STATUS.CREATED });
   } catch (e) {
+    console.error("ユーザー作成エラー:", e); // デバッグ用
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 }

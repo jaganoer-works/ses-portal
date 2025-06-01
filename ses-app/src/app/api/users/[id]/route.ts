@@ -27,32 +27,59 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const data = await req.json();
+    console.log("更新データ:", data); // デバッグ用
+    
     const parsed = userSchema.partial().safeParse(data);
     if (!parsed.success) {
+      console.log("バリデーションエラー:", parsed.error.errors); // デバッグ用
       const errors = parsed.error.errors.map(err => ({
         field: err.path.join("."),
         message: err.message,
       }));
       return apiError(errors, HTTP_STATUS.BAD_REQUEST);
     }
+    
     const prismaData = toPrismaNull(parsed.data);
+    
+    // 既存のスキル関連を削除
+    if (parsed.data.skills !== undefined) {
+      await prisma.userSkill.deleteMany({
+        where: { userId: params.id }
+      });
+      
+      // 新しいスキルを追加
+      if (parsed.data.skills.length > 0) {
+        const skillConnections = await Promise.all(
+          parsed.data.skills.map(async (skillName: string) => {
+            // スキルが存在しない場合は作成
+            const skill = await prisma.skill.upsert({
+              where: { name: skillName },
+              update: {},
+              create: { name: skillName },
+            });
+            return { userId: params.id, skillId: skill.id };
+          })
+        );
+
+        await prisma.userSkill.createMany({
+          data: skillConnections,
+        });
+      }
+    }
+
     const user = await prisma.user.update({
       where: { id: params.id },
       data: {
         ...prismaData,
-        skills: parsed.data.skills
-          ? {
-              deleteMany: {},
-              create: parsed.data.skills.map((skillName: string) => ({
-                skill: { connect: { name: skillName } },
-              })),
-            }
-          : undefined,
+        // スキルは上記で個別に処理済み
+        skills: undefined,
       } as any,
       include: { skills: { include: { skill: true } } },
     });
+    
     return NextResponse.json(user);
   } catch (e) {
+    console.error("ユーザー更新エラー:", e); // デバッグ用
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 }
