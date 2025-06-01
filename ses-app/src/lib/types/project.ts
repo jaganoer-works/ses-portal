@@ -41,7 +41,7 @@ export type ProjectListItem = Pick<
 // 新規作成・編集用の型
 export type ProjectFormData = {
   title: string;
-  price: number;
+  price: number | "";
   periodStart: string;
   periodEnd: string;
   description: string;

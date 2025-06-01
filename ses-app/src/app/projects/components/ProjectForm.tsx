@@ -11,7 +11,7 @@ type ProjectFormProps = {
 
 const initialFormData: ProjectFormData = {
   title: "",
-  price: 0,
+  price: "",
   periodStart: "",
   periodEnd: "",
   description: "",
@@ -37,7 +37,7 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
     if (mode === "edit" && initialData) {
       setFormData({
         title: initialData.title,
-        price: initialData.price || 0,
+        price: initialData.price || "",
         periodStart: initialData.periodStart.split('T')[0], // YYYY-MM-DD形式に変換
         periodEnd: initialData.periodEnd.split('T')[0],
         description: initialData.description || "",
@@ -56,7 +56,9 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
     } else if (type === "number") {
-      setFormData(prev => ({ ...prev, [name]: parseInt(value) || 0 }));
+      // 空文字列の場合はそのまま、数値の場合はparseIntして設定
+      const numValue = value === "" ? "" : parseInt(value) || "";
+      setFormData(prev => ({ ...prev, [name]: numValue }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -70,6 +72,7 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
     try {
       const submitData = {
         ...formData,
+        price: formData.price === "" ? null : formData.price,
         periodStart: new Date(formData.periodStart).toISOString(),
         periodEnd: new Date(formData.periodEnd).toISOString(),
       };
@@ -153,7 +156,7 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
           onChange={handleInputChange}
           min="0"
           className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          placeholder="0"
+          placeholder="例: 650000"
         />
       </div>
 
