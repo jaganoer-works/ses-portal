@@ -15,6 +15,7 @@ erDiagram
       DATETIME availableFrom
       STRING description
       STRING status
+      STRING role
       DATETIME lastLoginAt
       BOOLEAN isAvailable
       DATETIME createdAt
@@ -81,6 +82,7 @@ erDiagram
 | availableFrom    | DateTime   | 稼働可能日                 |
 | description      | String     | 技術者詳細                 |
 | status           | String     | 稼働中/稼働可能など        |
+| role             | String     | 権限（admin/sales等）      |
 | lastLoginAt      | DateTime?  | 最終ログイン日時           |
 | isAvailable      | Boolean    | 現在稼働可能か             |
 | createdAt        | DateTime   | 作成日時                   |
@@ -89,6 +91,8 @@ erDiagram
 | isActive         | Boolean    | 有効/無効                  |
 | createdBy        | String?    | 作成者ID（User.id）        |
 | updatedBy        | String?    | 更新者ID（User.id）        |
+
+> **備考**: `role`カラムを追加し、管理者・営業などの権限管理に対応。
 
 ---
 
