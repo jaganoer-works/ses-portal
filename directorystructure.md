@@ -7,6 +7,7 @@
 ├── git_rules.md            # Git運用ルール
 ├── requirements.md         # 要件定義書
 ├── technologystack.md      # 技術スタック定義
+├── troubleshooting.md      # トラブルシューティング
 ├── ses-app/                # Next.jsアプリ本体
 │   ├── prisma/             # Prismaスキーマ・DB・マイグレーション
 │   │   ├── dev.db
