@@ -7,10 +7,11 @@ import { toPrismaNull } from "@/lib/prismaUtils";
 const prisma = new PrismaClient();
 
 // 案件詳細取得（GET）
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const project = await prisma.project.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { interactions: true },
     });
     if (!project) {
@@ -23,13 +24,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // 案件更新（PUT）
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const data = await req.json();
     // TODO: projectSchemaを追加してバリデーション
     const prismaData = toPrismaNull(data);
     const project = await prisma.project.update({
-      where: { id: params.id },
+      where: { id },
       data: prismaData as any,
       include: { interactions: true },
     });
@@ -40,9 +42,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // 案件削除（DELETE）
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await prisma.project.delete({ where: { id: params.id } });
+    const { id } = await params;
+    await prisma.project.delete({ where: { id } });
     return NextResponse.json({ message: "案件が削除されました" });
   } catch (e) {
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);

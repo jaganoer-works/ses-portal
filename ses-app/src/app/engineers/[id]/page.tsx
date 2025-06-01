@@ -5,11 +5,12 @@ import Link from "next/link";
 import { Engineer } from "@/lib/types/user";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const engineer = await fetchEngineer(params.id);
+  const { id } = await params;
+  const engineer = await fetchEngineer(id);
   return {
     title: engineer ? `${engineer.name} | 技術者詳細` : "技術者詳細",
     description: engineer ? `${engineer.name}さんの詳細情報` : "技術者の詳細情報",
@@ -36,7 +37,8 @@ async function fetchEngineer(id: string): Promise<Engineer | null> {
 }
 
 export default async function EngineerDetailPage({ params }: Props) {
-  const engineer = await fetchEngineer(params.id);
+  const { id } = await params;
+  const engineer = await fetchEngineer(id);
   
   if (!engineer) {
     return notFound();
@@ -82,7 +84,7 @@ export default async function EngineerDetailPage({ params }: Props) {
             </div>
             
             <Link
-              href={`/engineers/${params.id}/edit`}
+              href={`/engineers/${id}/edit`}
               className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
             >
               編集

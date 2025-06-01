@@ -5,13 +5,14 @@ import { Engineer } from "@/lib/types/user";
 import { EngineerForm } from "../../components/EngineerForm";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
   return {
     title: "技術者編集 | SES管理システム",
-    description: `技術者（ID: ${params.id}）の情報を編集します。`,
+    description: `技術者（ID: ${id}）の情報を編集します。`,
   };
 }
 
@@ -35,7 +36,8 @@ async function fetchEngineer(id: string): Promise<Engineer | null> {
 }
 
 export default async function EditEngineerPage({ params }: Props) {
-  const engineer = await fetchEngineer(params.id);
+  const { id } = await params;
+  const engineer = await fetchEngineer(id);
   
   if (!engineer) {
     return notFound();
@@ -54,7 +56,7 @@ export default async function EditEngineerPage({ params }: Props) {
             </Link>
             <span className="text-gray-300">|</span>
             <Link 
-              href={`/engineers/${params.id}`}
+              href={`/engineers/${id}`}
               className="text-accent hover:text-accent-dark transition-colors"
             >
               技術者詳細
@@ -72,7 +74,7 @@ export default async function EditEngineerPage({ params }: Props) {
         <div className="bg-card rounded-lg shadow-lg p-6">
           <EngineerForm 
             mode="edit" 
-            engineerId={params.id}
+            engineerId={id}
             initialData={engineer}
           />
         </div>

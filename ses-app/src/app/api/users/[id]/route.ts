@@ -8,10 +8,11 @@ import { toPrismaNull } from "@/lib/prismaUtils";
 const prisma = new PrismaClient();
 
 // ユーザー詳細取得（GET）
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: { skills: { include: { skill: true } } },
     });
     if (!user) {
@@ -24,8 +25,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 }
 
 // ユーザー更新（PUT）
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const data = await req.json();
     console.log("更新データ:", data); // デバッグ用
     
@@ -44,7 +46,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // 既存のスキル関連を削除
     if (parsed.data.skills !== undefined) {
       await prisma.userSkill.deleteMany({
-        where: { userId: params.id }
+        where: { userId: id }
       });
       
       // 新しいスキルを追加
@@ -57,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
               update: {},
               create: { name: skillName },
             });
-            return { userId: params.id, skillId: skill.id };
+            return { userId: id, skillId: skill.id };
           })
         );
 
@@ -68,7 +70,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...prismaData,
         // スキルは上記で個別に処理済み
@@ -85,9 +87,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // ユーザー削除（DELETE）
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await prisma.user.delete({ where: { id: params.id } });
+    const { id } = await params;
+    await prisma.user.delete({ where: { id } });
     return NextResponse.json({ message: "ユーザーが削除されました" });
   } catch (e) {
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
