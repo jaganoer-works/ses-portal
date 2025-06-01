@@ -4,6 +4,8 @@
 
 ## プロジェクトルール抜粋
 
+- 技術スタックの詳細は `technologystack.md` を参照のこと
+- 技術スタックの変更・追加は必ず事前承認を得ること
 - Next.js（API Routes含む）＋ Prisma（ORM）＋ SQLite
 - 認証はNextAuth.js、デプロイはVercel
 - コード・データ設計・画面設計はMVP最小構成を優先
