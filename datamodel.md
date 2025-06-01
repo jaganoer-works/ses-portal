@@ -10,7 +10,6 @@ erDiagram
       STRING id PK
       STRING name
       STRING email
-      STRING[] skills
       INT desiredPrice
       DATETIME availableFrom
       STRING description
@@ -24,6 +23,16 @@ erDiagram
       BOOLEAN isActive
       STRING createdBy
       STRING updatedBy
+    }
+
+    SKILL {
+      STRING id PK
+      STRING name UNIQUE
+    }
+
+    USERSKILL {
+      STRING userId PK, FK
+      STRING skillId PK, FK
     }
 
     PROJECT {
@@ -65,6 +74,8 @@ erDiagram
     USER ||--o{ INTERACTION : "作成/更新"
     PROJECT ||--o{ INTERACTION : "やりとり"
     USER ||--o{ INTERACTION : "技術者"
+    USER ||--o{ USERSKILL : "スキル保有"
+    SKILL ||--o{ USERSKILL : "ユーザー保有"
 ```
 
 ---
@@ -77,7 +88,6 @@ erDiagram
 | id               | String     | 主キー（UUID）             |
 | name             | String     | 氏名                       |
 | email            | String     | メールアドレス（認証用）   |
-| skills           | String[]   | スキル（配列）             |
 | desiredPrice     | Int        | 希望単価                   |
 | availableFrom    | DateTime   | 稼働可能日                 |
 | description      | String     | 技術者詳細                 |
@@ -92,11 +102,25 @@ erDiagram
 | createdBy        | String?    | 作成者ID（User.id）        |
 | updatedBy        | String?    | 更新者ID（User.id）        |
 
-> **備考**: `role`カラムを追加し、管理者・営業などの権限管理に対応。
+> **備考**: skillsはUserSkill/Skillテーブルによる多対多リレーションで管理。
+
+### 2. Skill（スキルマスタ）
+| カラム名         | 型         | 説明                       |
+|------------------|------------|----------------------------|
+| id               | String     | 主キー（UUID）             |
+| name             | String     | スキル名（ユニーク）       |
+
+### 3. UserSkill（ユーザー・スキル中間テーブル）
+| カラム名         | 型         | 説明                       |
+|------------------|------------|----------------------------|
+| userId           | String     | User.id（外部キー）        |
+| skillId          | String     | Skill.id（外部キー）       |
+
+> **備考**: 複合主キー（userId, skillId）で多対多リレーションを表現。
 
 ---
 
-### 2. Project（SES案件）
+### 4. Project（SES案件）
 | カラム名         | 型         | 説明                       |
 |------------------|------------|----------------------------|
 | id               | String     | 主キー（UUID）             |
@@ -120,7 +144,7 @@ erDiagram
 
 ---
 
-### 3. Interaction（やりとり/メッセージ）
+### 5. Interaction（やりとり/メッセージ）
 | カラム名         | 型         | 説明                       |
 |------------------|------------|----------------------------|
 | id               | String     | 主キー（UUID）             |

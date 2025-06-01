@@ -1,0 +1,89 @@
+// SES案件・技術者管理アプリ/MVP Prismaスキーマ
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  desiredPrice  Int
+  availableFrom DateTime
+  description   String
+  status        String
+  role          String
+  lastLoginAt   DateTime?
+  isAvailable   Boolean
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+  isActive      Boolean   @default(true)
+  createdBy     String?
+  updatedBy     String?
+
+  // 多対多リレーション
+  skills        UserSkill[]
+}
+
+model Skill {
+  id    String   @id @default(uuid())
+  name  String   @unique
+  users UserSkill[]
+}
+
+model UserSkill {
+  userId  String
+  skillId String
+  user    User   @relation(fields: [userId], references: [id])
+  skill   Skill  @relation(fields: [skillId], references: [id])
+
+  @@id([userId, skillId])
+}
+
+model Project {
+  id              String    @id @default(uuid())
+  title           String
+  price           Int
+  periodStart     DateTime
+  periodEnd       DateTime
+  description     String
+  status          String
+  published       Boolean
+  publishedAt     DateTime?
+  lastContactedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+  isActive        Boolean   @default(true)
+  createdBy       String?
+  updatedBy       String?
+
+  // リレーション
+  interactions Interaction[]
+}
+
+model Interaction {
+  id         String    @id @default(uuid())
+  projectId  String
+  engineerId String
+  message    String
+  progress   String
+  isRead     Boolean
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  isActive   Boolean   @default(true)
+  createdBy  String?
+  updatedBy  String?
+
+  // リレーション
+  project Project @relation(fields: [projectId], references: [id])
+  // engineerIdはUser.idを参照（外部キー的運用）
+}
