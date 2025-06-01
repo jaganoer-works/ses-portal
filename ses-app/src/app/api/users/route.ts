@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { apiError } from "@/lib/apiError";
 import { HTTP_STATUS } from "@/lib/httpStatus";
+import { userSchema } from "@/lib/schema/userSchema";
 
 const prisma = new PrismaClient();
+
+// Prismaのoptional値をnullに変換するユーティリティ
+function toPrismaNull<T extends Record<string, any>>(obj: T): Partial<T> {
+  return Object.fromEntries(
+    Object.entries(obj).map(([k, v]) => [k, v === undefined ? null : v])
+  ) as Partial<T>;
+}
 
 // ユーザー一覧取得（GET）
 export async function GET(req: NextRequest) {
@@ -21,21 +29,26 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    // 簡易バリデーション例
-    if (!data.name || !data.email) {
-      return apiError("nameとemailは必須です", HTTP_STATUS.BAD_REQUEST);
+    const parsed = userSchema.safeParse(data);
+    if (!parsed.success) {
+      const errors = parsed.error.errors.map(err => ({
+        field: err.path.join("."),
+        message: err.message,
+      }));
+      return apiError(errors, HTTP_STATUS.BAD_REQUEST);
     }
+    const prismaData = toPrismaNull(parsed.data);
     const user = await prisma.user.create({
       data: {
-        ...data,
-        skills: data.skills
+        ...prismaData,
+        skills: parsed.data.skills
           ? {
-              create: data.skills.map((skillName: string) => ({
+              create: parsed.data.skills.map((skillName: string) => ({
                 skill: { connect: { name: skillName } },
               })),
             }
           : undefined,
-      },
+      } as any,
       include: { skills: { include: { skill: true } } },
     });
     return NextResponse.json(user, { status: HTTP_STATUS.CREATED });
