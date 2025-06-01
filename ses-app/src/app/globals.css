@@ -1,4 +1,11 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+
+/* カスタム色の定義 */
+@theme {
+  --color-base: #f8fafc;
+  --color-card: #ffffff;
+  --color-accent: #3b82f6;
+  --color-accent-dark: #1d4ed8;
+  --color-main: #1f2937;
+  --color-sub: #6b7280;
+}
