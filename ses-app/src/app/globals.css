@@ -1,8 +1,18 @@
 @import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --base-bg: #f7fafd;
+  --card-bg: #fff;
+  --accent-blue: #2e90fa;
+  --accent-blue-dark: #2563eb;
+  --border-color: #e5eaf2;
+  --text-main: #1e293b;
+  --text-sub: #64748b;
 }
 
 @theme inline {
@@ -22,5 +32,38 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    var(--font-geist-sans),
+    'Noto Sans JP',
+    'Inter',
+    'Roboto',
+    'Helvetica Neue',
+    Arial,
+    'ヒラギノ角ゴ ProN',
+    'Hiragino Kaku Gothic ProN',
+    'メイリオ',
+    Meiryo,
+    sans-serif;
+}
+
+.bg-base {
+  background-color: var(--base-bg);
+}
+.bg-card {
+  background-color: var(--card-bg);
+}
+.text-accent {
+  color: var(--accent-blue);
+}
+.text-accent-dark {
+  color: var(--accent-blue-dark);
+}
+.border-base {
+  border-color: var(--border-color);
+}
+.text-main {
+  color: var(--text-main);
+}
+.text-sub {
+  color: var(--text-sub);
 }
