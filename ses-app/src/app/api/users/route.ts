@@ -3,15 +3,9 @@ import { PrismaClient } from "@prisma/client";
 import { apiError } from "@/lib/apiError";
 import { HTTP_STATUS } from "@/lib/httpStatus";
 import { userSchema } from "@/lib/schema/userSchema";
+import { toPrismaNull } from "@/lib/prismaUtils";
 
 const prisma = new PrismaClient();
-
-// Prismaのoptional値をnullに変換するユーティリティ
-function toPrismaNull<T extends Record<string, any>>(obj: T): Partial<T> {
-  return Object.fromEntries(
-    Object.entries(obj).map(([k, v]) => [k, v === undefined ? null : v])
-  ) as Partial<T>;
-}
 
 // ユーザー一覧取得（GET）
 export async function GET(req: NextRequest) {
