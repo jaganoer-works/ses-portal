@@ -21,7 +21,7 @@ async function fetchEngineer(id: string): Promise<Engineer | null> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   
   try {
-    const res = await fetch(`${baseUrl}/api/users/${id}`, { 
+    const res = await fetch(`${baseUrl}/api/engineers/${id}`, { 
       cache: "no-store",
       headers: {
         'Content-Type': 'application/json',
