@@ -4,6 +4,7 @@ import Link from "next/link";
 import { EngineerListItem } from "@/lib/types/user";
 import { EngineerCard } from "./components/EngineerCard";
 import { ErrorDisplay } from "./components/ErrorBoundary";
+import { apiFetchWithError } from "@/lib/api/fetchService";
 
 export const metadata: Metadata = {
   title: "技術者一覧 | SES管理システム",
@@ -11,26 +12,7 @@ export const metadata: Metadata = {
 };
 
 async function fetchEngineers(): Promise<EngineerListItem[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  
-  try {
-    const res = await fetch(`${baseUrl}/api/engineers`, { 
-      cache: "no-store",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}: 技術者データの取得に失敗しました`);
-    }
-    
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    console.error("技術者データ取得エラー:", error);
-    throw error;
-  }
+  return apiFetchWithError<EngineerListItem[]>("/api/engineers");
 }
 
 export default async function EngineersPage() {

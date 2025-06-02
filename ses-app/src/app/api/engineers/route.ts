@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/apiError";
 import { HTTP_STATUS } from "@/lib/httpStatus";
 import { userSchema } from "@/lib/schema/userSchema";
 import { toPrismaNull } from "@/lib/prismaUtils";
-
-const prisma = new PrismaClient();
+import { createSkillConnections, userInclude } from "@/lib/api/skillService";
 
 // 技術者一覧取得（GET）
 export async function GET(req: NextRequest) {
   try {
     const engineers = await prisma.user.findMany({
       where: { role: "engineer" }, // 技術者のみ絞り込み
-      include: { skills: { include: { skill: true } } },
+      ...userInclude,
       orderBy: { createdAt: "desc" }
     });
     return NextResponse.json(engineers);
@@ -25,11 +24,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
-    console.log("受信したデータ:", data); // デバッグ用
     
     const parsed = userSchema.safeParse(data);
     if (!parsed.success) {
-      console.log("バリデーションエラー:", parsed.error.errors); // デバッグ用
       const errors = parsed.error.errors.map(err => ({
         field: err.path.join("."),
         message: err.message,
@@ -42,20 +39,8 @@ export async function POST(req: NextRequest) {
       role: "engineer" // 技術者として強制設定
     });
     
-    // スキルの処理を改善
-    const skillConnections = parsed.data.skills
-      ? await Promise.all(
-          parsed.data.skills.map(async (skillName: string) => {
-            // スキルが存在しない場合は作成
-            const skill = await prisma.skill.upsert({
-              where: { name: skillName },
-              update: {},
-              create: { name: skillName },
-            });
-            return { skillId: skill.id };
-          })
-        )
-      : [];
+    // 共通サービスを使用してスキル処理
+    const skillConnections = await createSkillConnections(parsed.data.skills || []);
 
     const engineer = await prisma.user.create({
       data: {
@@ -68,12 +53,12 @@ export async function POST(req: NextRequest) {
             }
           : undefined,
       } as any,
-      include: { skills: { include: { skill: true } } },
+      ...userInclude,
     });
     
     return NextResponse.json(engineer, { status: HTTP_STATUS.CREATED });
   } catch (e) {
-    console.error("技術者作成エラー:", e); // デバッグ用
+    console.error("技術者作成エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 } 

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/apiError";
 import { HTTP_STATUS } from "@/lib/httpStatus";
 import { userSchema } from "@/lib/schema/userSchema";
 import { toPrismaNull } from "@/lib/prismaUtils";
-
-const prisma = new PrismaClient();
+import { updateUserSkills, userInclude } from "@/lib/api/skillService";
 
 // 技術者詳細取得（GET）
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         id,
         role: "engineer" // 技術者のみ
       },
-      include: { skills: { include: { skill: true } } },
+      ...userInclude,
     });
     if (!engineer) {
       return apiError("技術者が見つかりません", HTTP_STATUS.NOT_FOUND);
@@ -32,7 +31,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const { id } = await params;
     const data = await req.json();
-    console.log("更新データ:", data); // デバッグ用
     
     // 既存の技術者が存在するか確認
     const existingEngineer = await prisma.user.findFirst({
@@ -47,7 +45,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const parsed = userSchema.partial().safeParse(data);
     if (!parsed.success) {
-      console.log("バリデーションエラー:", parsed.error.errors); // デバッグ用
       const errors = parsed.error.errors.map(err => ({
         field: err.path.join("."),
         message: err.message,
@@ -60,45 +57,24 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       role: "engineer" // 技術者として強制設定
     });
     
-    // 既存のスキル関連を削除
+    // 共通サービスを使用してスキル更新
     if (parsed.data.skills !== undefined) {
-      await prisma.userSkill.deleteMany({
-        where: { userId: id }
-      });
-      
-      // 新しいスキルを追加
-      if (parsed.data.skills.length > 0) {
-        const skillConnections = await Promise.all(
-          parsed.data.skills.map(async (skillName: string) => {
-            // スキルが存在しない場合は作成
-            const skill = await prisma.skill.upsert({
-              where: { name: skillName },
-              update: {},
-              create: { name: skillName },
-            });
-            return { userId: id, skillId: skill.id };
-          })
-        );
-
-        await prisma.userSkill.createMany({
-          data: skillConnections,
-        });
-      }
+      await updateUserSkills(id, parsed.data.skills);
     }
 
     const engineer = await prisma.user.update({
       where: { id },
       data: {
         ...prismaData,
-        // スキルは上記で個別に処理済み
+        // スキルは共通サービスで処理済み
         skills: undefined,
       } as any,
-      include: { skills: { include: { skill: true } } },
+      ...userInclude,
     });
     
     return NextResponse.json(engineer);
   } catch (e) {
-    console.error("技術者更新エラー:", e); // デバッグ用
+    console.error("技術者更新エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
 }
