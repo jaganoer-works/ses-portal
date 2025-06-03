@@ -3,7 +3,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { EngineerListItem } from "@/lib/types/user";
 import { EngineerCard } from "./components/EngineerCard";
-import { ErrorDisplay } from "./components/ErrorBoundary";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { Button } from "@/components/ui/Button";
+import { EmptyStateCard } from "@/components/ui/Card";
 import { apiFetchWithError } from "@/lib/api/fetchService";
 
 export const metadata: Metadata = {
@@ -43,31 +45,23 @@ export default async function EngineersPage() {
               </p>
             </div>
             
-            <Link
-              href="/engineers/new"
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              新規登録
+            <Link href="/engineers/new">
+              <Button>新規登録</Button>
             </Link>
           </div>
         </header>
 
         {engineers.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">👥</div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              技術者が登録されていません
-            </h2>
-            <p className="text-sub mb-6">
-              まだ技術者が登録されていません。新しい技術者を登録してください。
-            </p>
-            <Link
-              href="/engineers/new"
-              className="inline-flex px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              最初の技術者を登録
-            </Link>
-          </div>
+          <EmptyStateCard
+            icon="👥"
+            title="技術者が登録されていません"
+            description="まだ技術者が登録されていません。新しい技術者を登録してください。"
+            action={
+              <Link href="/engineers/new">
+                <Button size="lg">最初の技術者を登録</Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {engineers.map((engineer) => (

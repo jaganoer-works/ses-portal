@@ -3,7 +3,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { ProjectListItem } from "@/lib/types/project";
 import { ProjectCard } from "./components/ProjectCard";
-import { ErrorDisplay } from "./components/ErrorBoundary";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { Button } from "@/components/ui/Button";
+import { EmptyStateCard } from "@/components/ui/Card";
 
 export const metadata: Metadata = {
   title: "案件一覧 | SES管理システム",
@@ -61,31 +63,23 @@ export default async function ProjectsPage() {
               </p>
             </div>
             
-            <Link
-              href="/projects/new"
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              新規登録
+            <Link href="/projects/new">
+              <Button>新規登録</Button>
             </Link>
           </div>
         </header>
 
         {projects.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">📁</div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              案件が登録されていません
-            </h2>
-            <p className="text-sub mb-6">
-              まだ案件が登録されていません。新しい案件を登録してください。
-            </p>
-            <Link
-              href="/projects/new"
-              className="inline-flex px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              最初の案件を登録
-            </Link>
-          </div>
+          <EmptyStateCard
+            icon="📁"
+            title="案件が登録されていません"
+            description="まだ案件が登録されていません。新しい案件を登録してください。"
+            action={
+              <Link href="/projects/new">
+                <Button size="lg">最初の案件を登録</Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {projects.map((project) => (

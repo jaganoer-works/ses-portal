@@ -1,8 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Project, ProjectFormData } from "@/lib/types/project";
+import { FormField, CheckboxField } from "@/components/forms/FormField";
+import { FormActions } from "@/components/forms/FormActions";
+import { FormContainer } from "@/components/forms/FormActions";
+import { useForm, validators, combineValidators } from "@/hooks/useForm";
 
 type ProjectFormProps = {
   mode: "create" | "edit";
@@ -26,55 +30,57 @@ const statusOptions = [
   { value: "停止", label: "停止" },
 ];
 
+// バリデーション関数
+const validateProjectForm = (values: ProjectFormData) => {
+  const errors: Record<string, string> = {};
+
+  // タイトルの検証
+  const titleError = combineValidators(
+    validators.required("案件タイトルは必須です"),
+    validators.minLength(2, "案件タイトルは2文字以上で入力してください"),
+    validators.maxLength(100, "案件タイトルは100文字以内で入力してください")
+  )(values.title);
+  if (titleError) errors.title = titleError;
+
+  // 期間の検証
+  const startDateError = validators.required("開始日は必須です")(values.periodStart);
+  if (startDateError) errors.periodStart = startDateError;
+
+  const endDateError = validators.required("終了日は必須です")(values.periodEnd);
+  if (endDateError) errors.periodEnd = endDateError;
+
+  // 開始日 <= 終了日の検証
+  if (values.periodStart && values.periodEnd) {
+    const startDate = new Date(values.periodStart);
+    const endDate = new Date(values.periodEnd);
+    if (startDate > endDate) {
+      errors.periodEnd = "終了日は開始日以降の日付を選択してください";
+    }
+  }
+
+  // 単価の検証（任意フィールドだが、入力時は正の数値）
+  if (values.price !== "" && values.price !== null) {
+    const priceNumber = Number(values.price);
+    if (isNaN(priceNumber) || priceNumber < 0) {
+      errors.price = "単価は0以上の数値で入力してください";
+    }
+  }
+
+  return errors;
+};
+
 export function ProjectForm({ mode, initialData }: ProjectFormProps) {
   const router = useRouter();
-  const [formData, setFormData] = useState<ProjectFormData>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // 編集モードの場合、初期データを設定
-  useEffect(() => {
-    if (mode === "edit" && initialData) {
-      setFormData({
-        title: initialData.title,
-        price: initialData.price || "",
-        periodStart: initialData.periodStart.split('T')[0], // YYYY-MM-DD形式に変換
-        periodEnd: initialData.periodEnd.split('T')[0],
-        description: initialData.description || "",
-        status: initialData.status,
-        published: initialData.published,
-      });
-    }
-  }, [mode, initialData]);
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value, type } = e.target;
-    
-    if (type === "checkbox") {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (type === "number") {
-      // 空文字列の場合はそのまま、数値の場合はparseIntして設定
-      const numValue = value === "" ? "" : parseInt(value) || "";
-      setFormData(prev => ({ ...prev, [name]: numValue }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
+  const form = useForm<ProjectFormData>({
+    initialValues: initialFormData,
+    validate: validateProjectForm,
+    onSubmit: async (values) => {
       const submitData = {
-        ...formData,
-        price: formData.price === "" ? null : formData.price,
-        periodStart: new Date(formData.periodStart).toISOString(),
-        periodEnd: new Date(formData.periodEnd).toISOString(),
+        ...values,
+        price: values.price === "" ? null : values.price,
+        periodStart: new Date(values.periodStart).toISOString(),
+        periodEnd: new Date(values.periodEnd).toISOString(),
       };
 
       const url = mode === "create" 
@@ -97,174 +103,133 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
 
       const result = await response.json();
       
-      // 成功時は詳細ページまたは一覧ページにリダイレクト
+      // 成功時は詳細ページにリダイレクト
       if (mode === "create") {
         router.push(`/projects/${result.id}`);
       } else {
         router.push(`/projects/${result.id}`);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "エラーが発生しました");
-    } finally {
-      setIsSubmitting(false);
+    },
+  });
+
+  // 編集モードの場合、初期データを設定
+  useEffect(() => {
+    if (mode === "edit" && initialData) {
+      form.setValue("title", initialData.title);
+      form.setValue("price", initialData.price || "");
+      form.setValue("periodStart", initialData.periodStart.split('T')[0]);
+      form.setValue("periodEnd", initialData.periodEnd.split('T')[0]);
+      form.setValue("description", initialData.description || "");
+      form.setValue("status", initialData.status);
+      form.setValue("published", initialData.published);
+    }
+  }, [mode, initialData, form]);
+
+  const handleCancel = () => {
+    if (mode === "edit" && initialData) {
+      router.push(`/projects/${initialData.id}`);
+    } else {
+      router.push("/projects");
     }
   };
 
-  const formatDateForInput = (dateString: string) => {
-    return dateString.split('T')[0];
-  };
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <div className="flex">
-            <div className="text-red-800">
-              <strong>エラー:</strong> {error}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <FormContainer onSubmit={form.handleSubmit} error={form.errors.general}>
       {/* 案件タイトル */}
-      <div>
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-          案件タイトル <span className="text-red-500">*</span>
-        </label>
-        <input
-          type="text"
-          id="title"
-          name="title"
-          value={formData.title}
-          onChange={handleInputChange}
-          required
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          placeholder="案件のタイトルを入力してください"
-        />
-      </div>
+      <FormField
+        label="案件タイトル"
+        name="title"
+        value={form.values.title}
+        onChange={form.handleChange}
+        onBlur={form.handleBlur}
+        required
+        placeholder="案件のタイトルを入力してください"
+        error={form.touched.title ? form.errors.title : undefined}
+      />
 
       {/* 単価 */}
-      <div>
-        <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-          単価（円）
-        </label>
-        <input
-          type="number"
-          id="price"
-          name="price"
-          value={formData.price}
-          onChange={handleInputChange}
-          min="0"
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          placeholder="例: 650000"
-        />
-      </div>
+      <FormField
+        label="単価（円）"
+        name="price"
+        type="number"
+        value={form.values.price}
+        onChange={form.handleChange}
+        onBlur={form.handleBlur}
+        placeholder="例: 650000"
+        min={0}
+        error={form.touched.price ? form.errors.price : undefined}
+        helpText="空欄の場合は「要相談」として表示されます"
+      />
 
       {/* 期間 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="periodStart" className="block text-sm font-medium text-gray-700 mb-2">
-            開始日 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            id="periodStart"
-            name="periodStart"
-            value={formData.periodStart}
-            onChange={handleInputChange}
-            required
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="periodEnd" className="block text-sm font-medium text-gray-700 mb-2">
-            終了日 <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            id="periodEnd"
-            name="periodEnd"
-            value={formData.periodEnd}
-            onChange={handleInputChange}
-            required
-            className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          />
-        </div>
-      </div>
-
-      {/* ステータス */}
-      <div>
-        <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-          ステータス <span className="text-red-500">*</span>
-        </label>
-        <select
-          id="status"
-          name="status"
-          value={formData.status}
-          onChange={handleInputChange}
+        <FormField
+          label="開始日"
+          name="periodStart"
+          type="date"
+          value={form.values.periodStart}
+          onChange={form.handleChange}
+          onBlur={form.handleBlur}
           required
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-        >
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 公開設定 */}
-      <div>
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            name="published"
-            checked={formData.published}
-            onChange={handleInputChange}
-            className="rounded border-gray-300 text-accent focus:ring-accent"
-          />
-          <span className="ml-2 text-sm text-gray-700">この案件を公開する</span>
-        </label>
-      </div>
-
-      {/* 詳細説明 */}
-      <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-          詳細説明
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description}
-          onChange={handleInputChange}
-          rows={4}
-          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-accent focus:border-accent"
-          placeholder="案件の詳細な説明を入力してください"
+          error={form.touched.periodStart ? form.errors.periodStart : undefined}
+        />
+        
+        <FormField
+          label="終了日"
+          name="periodEnd"
+          type="date"
+          value={form.values.periodEnd}
+          onChange={form.handleChange}
+          onBlur={form.handleBlur}
+          required
+          error={form.touched.periodEnd ? form.errors.periodEnd : undefined}
         />
       </div>
 
-      {/* ボタン */}
-      <div className="flex gap-4 pt-4">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-6 py-2 bg-accent text-white rounded-md hover:bg-accent-dark focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isSubmitting 
-            ? (mode === "create" ? "登録中..." : "更新中...") 
-            : (mode === "create" ? "案件を登録" : "案件を更新")
-          }
-        </button>
-        
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="px-6 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        >
-          キャンセル
-        </button>
-      </div>
-    </form>
+      {/* ステータス */}
+      <FormField
+        label="ステータス"
+        name="status"
+        type="select"
+        value={form.values.status}
+        onChange={form.handleChange}
+        onBlur={form.handleBlur}
+        required
+        options={statusOptions}
+        error={form.touched.status ? form.errors.status : undefined}
+      />
+
+      {/* 案件詳細 */}
+      <FormField
+        label="案件詳細"
+        name="description"
+        type="textarea"
+        value={form.values.description}
+        onChange={form.handleChange}
+        onBlur={form.handleBlur}
+        placeholder="案件の詳細な説明を入力してください（任意）"
+        rows={6}
+        error={form.touched.description ? form.errors.description : undefined}
+      />
+
+      {/* 公開設定 */}
+      <CheckboxField
+        label="この案件を公開する"
+        name="published"
+        checked={form.values.published}
+        onChange={form.handleChange}
+        helpText="チェックを入れると、技術者検索画面で案件が表示されます"
+        error={form.touched.published ? form.errors.published : undefined}
+      />
+
+      {/* アクションボタン */}
+      <FormActions
+        submitText={mode === "create" ? "案件を作成" : "変更を保存"}
+        cancelText="キャンセル"
+        onCancel={handleCancel}
+        isSubmitting={form.isSubmitting}
+        submitDisabled={!form.isValid}
+      />
+    </FormContainer>
   );
 } 
