@@ -1,21 +1,83 @@
-import { notFound } from "next/navigation";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { fetchInteraction } from "@/lib/api/interactions";
 import { InteractionDetailClient } from "./InteractionDetailClient";
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { Loading } from "@/components/ui/Loading";
+import { PageLayout } from "@/components/layout";
+import { PermissionGuard, SalesOrHigher } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Permission } from "@/lib/permissions";
 
-interface Props {
-  params: Promise<{ id: string }>;
-}
+export default function InteractionDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+  const [interaction, setInteraction] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated, canReadInteractions } = usePermissions();
 
-export default async function InteractionDetailPage({ params }: Props) {
-  const { id } = await params;
+  useEffect(() => {
+    const loadInteraction = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // 認証チェック
+        if (!isAuthenticated) {
+          setError("認証が必要です");
+          return;
+        }
+        
+        // 権限チェック
+        if (!canReadInteractions) {
+          setError("やりとりを閲覧する権限がありません");
+          return;
+        }
+        
+        const data = await fetchInteraction(id);
+        setInteraction(data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "やりとりデータの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  let interaction;
-  try {
-    interaction = await fetchInteraction(id);
-  } catch (error) {
-    console.error("やりとり詳細取得エラー:", error);
-    notFound();
+    // 認証状態が確定してからAPI呼び出し
+    if (isAuthenticated !== undefined && id) {
+      loadInteraction();
+    }
+  }, [isAuthenticated, id]);
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <Loading variant="dots" size="lg" />
+          <p className="text-sub mt-4">やりとりデータを読み込み中...</p>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <ErrorDisplay message={error} />
+      </PageLayout>
+    );
+  }
+
+  if (!interaction) {
+    return (
+      <PageLayout>
+        <ErrorDisplay message="やりとりデータが見つかりません" />
+      </PageLayout>
+    );
   }
 
   // 日時フォーマット
@@ -62,131 +124,135 @@ export default async function InteractionDetailPage({ params }: Props) {
   };
 
   return (
-    <main className="min-h-screen bg-base py-8 px-4">
-      <div className="container mx-auto max-w-4xl">
-        {/* ナビゲーション */}
-        <nav className="mb-6">
-          <Link 
-            href="/interactions" 
-            className="text-accent hover:text-accent-dark font-medium text-sm transition-colors"
-          >
-            ← やりとり一覧に戻る
-          </Link>
-        </nav>
+    <PermissionGuard permissions={[Permission.INTERACTION_READ]}>
+      <main className="min-h-screen bg-base py-8 px-4">
+        <div className="container mx-auto max-w-4xl">
+          {/* ナビゲーション */}
+          <nav className="mb-6">
+            <Link 
+              href="/interactions" 
+              className="text-accent hover:text-accent-dark font-medium text-sm transition-colors"
+            >
+              ← やりとり一覧に戻る
+            </Link>
+          </nav>
 
-        {/* ヘッダー */}
-        <header className="mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <div className="flex-1">
-              <h1 className="text-2xl md:text-3xl font-bold text-accent mb-4">
-                やりとり詳細
-              </h1>
-              <div className="flex gap-3">
-                {getReadStatusBadge(interaction.isRead)}
-                {interaction.progress && getProgressBadge(interaction.progress)}
+          {/* ヘッダー */}
+          <header className="mb-8">
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex-1">
+                <h1 className="text-2xl md:text-3xl font-bold text-accent mb-4">
+                  やりとり詳細
+                </h1>
+                <div className="flex gap-3">
+                  {getReadStatusBadge(interaction.isRead)}
+                  {interaction.progress && getProgressBadge(interaction.progress)}
+                </div>
               </div>
+              
+              <SalesOrHigher>
+                <div className="flex gap-2 ml-4">
+                  <Link
+                    href={`/interactions/${interaction.id}/edit`}
+                    className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                  >
+                    編集
+                  </Link>
+                </div>
+              </SalesOrHigher>
             </div>
-            
-            <div className="flex gap-2 ml-4">
-              <Link
-                href={`/interactions/${interaction.id}/edit`}
-                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-              >
-                編集
-              </Link>
-            </div>
-          </div>
-        </header>
+          </header>
 
-        {/* メイン情報 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 左カラム: メッセージ内容 */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* メッセージカード */}
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">メッセージ内容</h2>
-              <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {interaction.message}
-                </p>
-              </div>
-            </div>
-
-            {/* 関連案件情報 */}
-            {interaction.project && (
+          {/* メイン情報 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* 左カラム: メッセージ内容 */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* メッセージカード */}
               <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">関連案件</h2>
-                <div className="space-y-2">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">メッセージ内容</h2>
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {interaction.message}
+                  </p>
+                </div>
+              </div>
+
+              {/* 関連案件情報 */}
+              {interaction.project && (
+                <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                  <h2 className="text-lg font-semibold text-gray-900 mb-4">関連案件</h2>
+                  <div className="space-y-2">
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">案件名</dt>
+                      <dd className="text-lg font-semibold text-gray-900">
+                        <Link
+                          href={`/projects/${interaction.project.id}`}
+                          className="text-accent hover:text-accent-dark transition-colors"
+                        >
+                          {interaction.project.title}
+                        </Link>
+                      </dd>
+                    </div>
+                    
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">ステータス</dt>
+                      <dd className="text-sm text-gray-900">{interaction.project.status}</dd>
+                    </div>
+
+                    {interaction.project.description && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">案件詳細</dt>
+                        <dd className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
+                          {interaction.project.description}
+                        </dd>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 右カラム: サイドバー */}
+            <div className="space-y-6">
+              {/* メタ情報カード */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">詳細情報</h3>
+                
+                <dl className="space-y-3">
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">案件名</dt>
-                    <dd className="text-lg font-semibold text-gray-900">
-                      <Link
-                        href={`/projects/${interaction.project.id}`}
-                        className="text-accent hover:text-accent-dark transition-colors"
-                      >
-                        {interaction.project.title}
-                      </Link>
-                    </dd>
+                    <dt className="text-xs font-medium text-gray-500">作成日時</dt>
+                    <dd className="text-sm text-gray-900">{formatDateTime(interaction.createdAt)}</dd>
                   </div>
                   
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">ステータス</dt>
-                    <dd className="text-sm text-gray-900">{interaction.project.status}</dd>
+                    <dt className="text-xs font-medium text-gray-500">更新日時</dt>
+                    <dd className="text-sm text-gray-900">{formatDateTime(interaction.updatedAt)}</dd>
+                  </div>
+                  
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500">技術者ID</dt>
+                    <dd className="text-sm text-gray-900">{interaction.engineerId}</dd>
                   </div>
 
-                  {interaction.project.description && (
+                  {interaction.readAt && (
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">案件詳細</dt>
-                      <dd className="text-sm text-gray-700 whitespace-pre-wrap line-clamp-3">
-                        {interaction.project.description}
-                      </dd>
+                      <dt className="text-xs font-medium text-gray-500">既読日時</dt>
+                      <dd className="text-sm text-gray-900">{formatDateTime(interaction.readAt)}</dd>
                     </div>
                   )}
-                </div>
+                </dl>
               </div>
-            )}
-          </div>
 
-          {/* 右カラム: サイドバー */}
-          <div className="space-y-6">
-            {/* メタ情報カード */}
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">詳細情報</h3>
-              
-              <dl className="space-y-3">
-                <div>
-                  <dt className="text-xs font-medium text-gray-500">作成日時</dt>
-                  <dd className="text-sm text-gray-900">{formatDateTime(interaction.createdAt)}</dd>
-                </div>
+              {/* アクションカード */}
+              <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">アクション</h3>
                 
-                <div>
-                  <dt className="text-xs font-medium text-gray-500">更新日時</dt>
-                  <dd className="text-sm text-gray-900">{formatDateTime(interaction.updatedAt)}</dd>
-                </div>
-                
-                <div>
-                  <dt className="text-xs font-medium text-gray-500">技術者ID</dt>
-                  <dd className="text-sm text-gray-900">{interaction.engineerId}</dd>
-                </div>
-
-                {interaction.readAt && (
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500">既読日時</dt>
-                    <dd className="text-sm text-gray-900">{formatDateTime(interaction.readAt)}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-
-            {/* アクションカード */}
-            <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">アクション</h3>
-              
-              <InteractionDetailClient interaction={interaction} />
+                <InteractionDetailClient interaction={interaction} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </main>
+      </main>
+    </PermissionGuard>
   );
 } 

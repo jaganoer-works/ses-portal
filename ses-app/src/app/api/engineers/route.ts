@@ -5,23 +5,43 @@ import { HTTP_STATUS } from "@/lib/httpStatus";
 import { userSchema } from "@/lib/schema/userSchema";
 import { toPrismaNull } from "@/lib/prismaUtils";
 import { createSkillConnections, userInclude } from "@/lib/api/skillService";
+import { withAuth, requirePermission } from "@/lib/authMiddleware";
+import { Permission } from "@/lib/permissions";
 
-// 技術者一覧取得（GET）
-export async function GET(req: NextRequest) {
+// 技術者一覧取得（GET）- 権限チェック付き
+export const GET = withAuth(async (req: NextRequest, session) => {
   try {
+    const { user } = session;
+    
+    // エンジニアロールの場合は自分の情報のみ取得可能
+    if (user.role === "engineer") {
+      const engineer = await prisma.user.findUnique({
+        where: { 
+          id: user.id,
+          role: "engineer" 
+        },
+        ...userInclude
+      });
+      
+      return NextResponse.json(engineer ? [engineer] : []);
+    }
+    
+    // 管理者・営業は全技術者一覧取得可能
     const engineers = await prisma.user.findMany({
-      where: { role: "engineer" }, // 技術者のみ絞り込み
+      where: { role: "engineer" },
       ...userInclude,
       orderBy: { createdAt: "desc" }
     });
+    
     return NextResponse.json(engineers);
   } catch (e) {
+    console.error("技術者一覧取得エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-}
+}, requirePermission(Permission.ENGINEER_READ));
 
-// 技術者新規作成（POST）
-export async function POST(req: NextRequest) {
+// 技術者新規作成（POST）- 権限チェック付き
+export const POST = withAuth(async (req: NextRequest, session) => {
   try {
     const data = await req.json();
     
@@ -36,7 +56,9 @@ export async function POST(req: NextRequest) {
     
     const prismaData = toPrismaNull({
       ...parsed.data,
-      role: "engineer" // 技術者として強制設定
+      role: "engineer", // 技術者として強制設定
+      createdBy: session.user.id,
+      updatedBy: session.user.id
     });
     
     // 共通サービスを使用してスキル処理
@@ -61,4 +83,4 @@ export async function POST(req: NextRequest) {
     console.error("技術者作成エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-} 
+}, requirePermission(Permission.ENGINEER_CREATE)); 

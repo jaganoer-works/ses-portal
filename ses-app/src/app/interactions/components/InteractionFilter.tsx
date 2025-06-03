@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { InteractionFilter as FilterType } from "@/lib/api/interactions";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface InteractionFilterProps {
   currentFilter: FilterType;
@@ -16,31 +17,49 @@ export function InteractionFilter({ currentFilter, onFilterChange }: Interaction
   );
   const [projects, setProjects] = useState<Array<{id: string, title: string}>>([]);
   const [engineers, setEngineers] = useState<Array<{id: string, name: string}>>([]);
+  const [loading, setLoading] = useState(false);
+  const { isAuthenticated, canReadProjects, canReadUsers } = usePermissions();
 
   // プロジェクトと技術者の一覧を取得
   useEffect(() => {
     const fetchOptions = async () => {
       try {
+        setLoading(true);
+        
+        // 認証チェック
+        if (!isAuthenticated) {
+          return;
+        }
+
         // プロジェクト一覧取得
-        const projectsResponse = await fetch("/api/projects");
-        if (projectsResponse.ok) {
-          const projectsData = await projectsResponse.json();
-          setProjects(projectsData.map((p: any) => ({ id: p.id, title: p.title })));
+        if (canReadProjects) {
+          const projectsResponse = await fetch("/api/projects");
+          if (projectsResponse.ok) {
+            const projectsData = await projectsResponse.json();
+            setProjects(projectsData.map((p: any) => ({ id: p.id, title: p.title })));
+          }
         }
 
         // 技術者一覧取得
-        const engineersResponse = await fetch("/api/users");
-        if (engineersResponse.ok) {
-          const engineersData = await engineersResponse.json();
-          setEngineers(engineersData.map((e: any) => ({ id: e.id, name: e.name })));
+        if (canReadUsers) {
+          const engineersResponse = await fetch("/api/users");
+          if (engineersResponse.ok) {
+            const engineersData = await engineersResponse.json();
+            setEngineers(engineersData.map((e: any) => ({ id: e.id, name: e.name })));
+          }
         }
       } catch (error) {
         console.error("選択肢データの取得エラー:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    fetchOptions();
-  }, []);
+    // 認証状態が確定してからAPI呼び出し
+    if (isAuthenticated !== undefined) {
+      fetchOptions();
+    }
+  }, [isAuthenticated, canReadProjects, canReadUsers]);
 
   // フィルタ適用
   const handleApplyFilter = () => {
@@ -70,6 +89,21 @@ export function InteractionFilter({ currentFilter, onFilterChange }: Interaction
     );
   }, [currentFilter]);
 
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-16 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">フィルタ</h3>
@@ -84,7 +118,8 @@ export function InteractionFilter({ currentFilter, onFilterChange }: Interaction
             id="project-filter"
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+            disabled={!canReadProjects}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">すべての案件</option>
             {projects.map((project) => (
@@ -104,7 +139,8 @@ export function InteractionFilter({ currentFilter, onFilterChange }: Interaction
             id="engineer-filter"
             value={engineerId}
             onChange={(e) => setEngineerId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+            disabled={!canReadUsers}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <option value="">すべての技術者</option>
             {engineers.map((engineer) => (

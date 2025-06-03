@@ -7,9 +7,13 @@ import { Card, CardWithHeader, LinkCard } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { PageLoading } from "@/components/ui/Loading";
 import { PageLayout } from "@/components/layout";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionGuard, AdminOnly } from "@/components/auth/PermissionGuard";
+import { Permission } from "@/lib/permissions";
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const permissions = usePermissions();
 
   if (status === "loading") {
     return <PageLoading text="認証情報を確認中..." />;
@@ -30,30 +34,76 @@ export default function Home() {
     }
   };
 
-  const getMenuItems = (role: string) => {
-    const commonItems = [
-      {
+  const getMenuItems = () => {
+    const items = [];
+
+    // 案件管理（権限に応じて表示）
+    if (permissions.canReadProjects) {
+      items.push({
         href: "/projects",
         title: "案件管理",
         description: "案件の一覧・詳細・編集",
-        icon: "📁"
-      },
-      {
+        icon: "📋",
+        permission: Permission.PROJECT_READ
+      });
+    }
+
+    // 技術者管理（権限に応じて表示）
+    if (permissions.canReadEngineers) {
+      items.push({
         href: "/engineers",
-        title: "技術者管理",
-        description: "技術者の一覧・詳細・編集",
-        icon: "👥"
-      },
-      {
+        title: "技術者管理", 
+        description: permissions.isEngineer ? "自分の情報・プロフィール管理" : "技術者の一覧・詳細・編集",
+        icon: "👥",
+        permission: Permission.ENGINEER_READ
+      });
+    }
+
+    // やりとり管理（権限に応じて表示）
+    if (permissions.canReadInteractions) {
+      items.push({
         href: "/interactions",
         title: "やりとり管理",
         description: "案件と技術者のやりとり履歴",
-        icon: "💬"
-      }
-    ];
+        icon: "💬",
+        permission: Permission.INTERACTION_READ
+      });
+    }
 
-    // ロールに関係なく全機能アクセス可能（MVP版）
-    return commonItems;
+    return items;
+  };
+
+  const getQuickActions = () => {
+    const actions = [];
+
+    // 新規案件登録（権限チェック）
+    if (permissions.canCreateProjects) {
+      actions.push({
+        href: "/projects/new",
+        label: "📝 新規案件登録",
+        permission: Permission.PROJECT_CREATE
+      });
+    }
+
+    // 新規技術者登録（権限チェック）
+    if (permissions.canCreateEngineers) {
+      actions.push({
+        href: "/engineers/new",
+        label: "👤 新規技術者登録",
+        permission: Permission.ENGINEER_CREATE
+      });
+    }
+
+    // 新規やりとり登録（権限チェック）
+    if (permissions.canCreateInteractions) {
+      actions.push({
+        href: "/interactions/new",
+        label: "💬 新規やりとり登録",
+        permission: Permission.INTERACTION_CREATE
+      });
+    }
+
+    return actions;
   };
 
   return (
@@ -65,8 +115,27 @@ export default function Home() {
           subtitle={`ロール: ${getRoleDisplayName(session.user.role)}`}
         >
           <p className="text-sub">
-            SES管理システムにログインしました。各機能をご利用ください。
+            SES管理システムにログインしました。{permissions.isEngineer ? "ご自身の" : "各"}機能をご利用ください。
           </p>
+          
+          {/* ロール別の説明 */}
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            {permissions.isAdmin && (
+              <p className="text-sm text-blue-700">
+                <strong>管理者権限:</strong> 全ての機能にアクセス可能です。システム全体の管理を行えます。
+              </p>
+            )}
+            {permissions.isSales && (
+              <p className="text-sm text-blue-700">
+                <strong>営業権限:</strong> 案件・技術者・やりとりの管理が可能です。削除権限はありません。
+              </p>
+            )}
+            {permissions.isEngineer && (
+              <p className="text-sm text-blue-700">
+                <strong>エンジニア権限:</strong> 自分の情報と関連するやりとりの確認・更新が可能です。
+              </p>
+            )}
+          </div>
         </CardWithHeader>
       </section>
 
@@ -77,22 +146,20 @@ export default function Home() {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {getMenuItems(session.user.role).map((item) => (
-            <LinkCard
-              key={item.href}
-              href={item.href}
-              className="h-full"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-3">{item.icon}</div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {item.title}
-                </h3>
-                <p className="text-sub text-sm">
-                  {item.description}
-                </p>
-              </div>
-            </LinkCard>
+          {getMenuItems().map((item) => (
+            <PermissionGuard key={item.href} permission={item.permission}>
+              <LinkCard href={item.href} className="h-full">
+                <div className="text-center">
+                  <div className="text-4xl mb-3">{item.icon}</div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {item.title}
+                  </h3>
+                  <p className="text-sub text-sm">
+                    {item.description}
+                  </p>
+                </div>
+              </LinkCard>
+            </PermissionGuard>
           ))}
         </div>
       </section>
@@ -129,25 +196,51 @@ export default function Home() {
               クイックアクション
             </h3>
             <div className="space-y-3">
-              <Link href="/projects/new">
-                <Button variant="outline" className="w-full">
-                  📝 新規案件登録
-                </Button>
-              </Link>
-              <Link href="/engineers/new">
-                <Button variant="outline" className="w-full">
-                  👤 新規技術者登録
-                </Button>
-              </Link>
-              <Link href="/interactions/new">
-                <Button variant="outline" className="w-full">
-                  💬 新規やりとり登録
-                </Button>
-              </Link>
+              {getQuickActions().map((action) => (
+                <PermissionGuard key={action.href} permission={action.permission}>
+                  <Link href={action.href}>
+                    <Button variant="outline" className="w-full">
+                      {action.label}
+                    </Button>
+                  </Link>
+                </PermissionGuard>
+              ))}
+              
+              {getQuickActions().length === 0 && (
+                <p className="text-sm text-sub text-center py-4">
+                  作成権限がありません
+                </p>
+              )}
             </div>
           </Card>
         </div>
       </section>
+
+      {/* 管理者専用セクション */}
+      <AdminOnly>
+        <section className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            システム管理
+          </h2>
+          <Card>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              管理者機能
+            </h3>
+            <div className="space-y-3">
+              <Link href="/admin/users">
+                <Button variant="outline" className="w-full">
+                  👥 ユーザー管理
+                </Button>
+              </Link>
+              <Link href="/admin/system">
+                <Button variant="outline" className="w-full">
+                  ⚙️ システム設定
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </section>
+      </AdminOnly>
     </PageLayout>
   );
 }

@@ -5,32 +5,50 @@ import { HTTP_STATUS } from "@/lib/httpStatus";
 import { userSchema } from "@/lib/schema/userSchema";
 import { toPrismaNull } from "@/lib/prismaUtils";
 import { updateUserSkills, userInclude } from "@/lib/api/skillService";
+import { withAuth, requirePermission } from "@/lib/authMiddleware";
+import { Permission, isResourceOwner } from "@/lib/permissions";
 
-// 技術者詳細取得（GET）
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// 技術者詳細取得（GET）- 権限チェック付き
+export const GET = withAuth(async (req: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
+    const { user } = session;
+    
+    // エンジニアロールの場合は自分の情報のみアクセス可能
+    if (user.role === "engineer" && !isResourceOwner(user.id, id)) {
+      return apiError("他の技術者の情報にはアクセスできません", HTTP_STATUS.FORBIDDEN);
+    }
+    
     const engineer = await prisma.user.findFirst({
       where: { 
         id,
-        role: "engineer" // 技術者のみ
+        role: "engineer"
       },
       ...userInclude,
     });
+    
     if (!engineer) {
       return apiError("技術者が見つかりません", HTTP_STATUS.NOT_FOUND);
     }
+    
     return NextResponse.json(engineer);
   } catch (e) {
+    console.error("技術者詳細取得エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-}
+}, requirePermission(Permission.ENGINEER_READ));
 
-// 技術者更新（PUT）
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// 技術者更新（PUT）- 権限チェック付き
+export const PUT = withAuth(async (req: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     const data = await req.json();
+    const { user } = session;
+    
+    // エンジニアロールの場合は自分の情報のみ更新可能
+    if (user.role === "engineer" && !isResourceOwner(user.id, id)) {
+      return apiError("他の技術者の情報は更新できません", HTTP_STATUS.FORBIDDEN);
+    }
     
     // 既存の技術者が存在するか確認
     const existingEngineer = await prisma.user.findFirst({
@@ -54,7 +72,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     
     const prismaData = toPrismaNull({
       ...parsed.data,
-      role: "engineer" // 技術者として強制設定
+      role: "engineer", // 技術者として強制設定
+      updatedBy: user.id
     });
     
     // 共通サービスを使用してスキル更新
@@ -77,10 +96,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     console.error("技術者更新エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-}
+}, requirePermission(Permission.ENGINEER_UPDATE));
 
-// 技術者削除（DELETE）
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+// 技術者削除（DELETE）- 権限チェック付き
+export const DELETE = withAuth(async (req: NextRequest, session, { params }: { params: Promise<{ id: string }> }) => {
   try {
     const { id } = await params;
     
@@ -98,6 +117,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ message: "技術者が削除されました" });
   } catch (e) {
+    console.error("技術者削除エラー:", e);
     return apiError(e as string | Error, HTTP_STATUS.INTERNAL_SERVER_ERROR);
   }
-} 
+}, requirePermission(Permission.ENGINEER_DELETE)); 

@@ -12,6 +12,9 @@ import { Loading } from "@/components/ui/Loading";
 import { Button } from "@/components/ui/Button";
 import { EmptyStateCard } from "@/components/ui/Card";
 import { PageLayout } from "@/components/layout";
+import { PermissionGuard, SalesOrHigher } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Permission } from "@/lib/permissions";
 
 export default function InteractionsPage() {
   const [interactions, setInteractions] = useState<Interaction[]>([]);
@@ -21,6 +24,7 @@ export default function InteractionsPage() {
   const [filter, setFilter] = useState<InteractionFilter>({});
 
   const searchParams = useSearchParams();
+  const permissions = usePermissions();
 
   // URLパラメータから初期フィルタ設定
   useEffect(() => {
@@ -52,8 +56,13 @@ export default function InteractionsPage() {
       }
     };
 
-    loadInteractions();
-  }, [filter]);
+    if (permissions.canReadInteractions) {
+      loadInteractions();
+    } else {
+      setError("やりとりを閲覧する権限がありません");
+      setLoading(false);
+    }
+  }, [filter, permissions.isAuthenticated]);
 
   // フィルタ処理
   const handleFilterChange = (newFilter: InteractionFilter) => {
@@ -87,72 +96,78 @@ export default function InteractionsPage() {
   }
 
   return (
-    <PageLayout>
-      {/* ナビゲーション */}
-      <nav className="mb-6">
-        <Link 
-          href="/projects" 
-          className="text-accent hover:text-accent-dark font-medium text-sm transition-colors"
-        >
-          ← 案件一覧に戻る
-        </Link>
-      </nav>
-
-      {/* ヘッダー */}
-      <header className="mb-8">
-        <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-accent mb-2">
-              やりとり管理
-            </h1>
-            <p className="text-sub">
-              {interactions.length}件のやりとりが登録されています
-            </p>
-          </div>
-          
-          <Link href="/interactions/new">
-            <Button>新規やりとり</Button>
+    <PermissionGuard permissions={[Permission.INTERACTION_READ]}>
+      <PageLayout>
+        {/* ナビゲーション */}
+        <nav className="mb-6">
+          <Link 
+            href="/projects" 
+            className="text-accent hover:text-accent-dark font-medium text-sm transition-colors"
+          >
+            ← 案件一覧に戻る
           </Link>
-        </div>
+        </nav>
 
-        {/* フィルタ */}
-        <FilterComponent 
-          currentFilter={filter} 
-          onFilterChange={handleFilterChange}
-        />
-      </header>
+        {/* ヘッダー */}
+        <header className="mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-accent mb-2">
+                やりとり管理
+              </h1>
+              <p className="text-sub">
+                {interactions.length}件のやりとりが登録されています
+              </p>
+            </div>
+            
+            <PermissionGuard permissions={[Permission.INTERACTION_CREATE]}>
+              <Link href="/interactions/new">
+                <Button>新規やりとり</Button>
+              </Link>
+            </PermissionGuard>
+          </div>
 
-      {/* コンテンツ */}
-      {filteredInteractions.length === 0 ? (
-        <EmptyStateCard
-          icon="💬"
-          title={
-            filter.project || filter.engineer || filter.isRead !== undefined 
-              ? "条件に一致するやりとりがありません" 
-              : "やりとりが登録されていません"
-          }
-          description={
-            filter.project || filter.engineer || filter.isRead !== undefined 
-              ? "フィルタ条件を変更してください。" 
-              : "まだやりとりが登録されていません。新しいやりとりを作成してください。"
-          }
-          action={
-            <Link href="/interactions/new">
-              <Button size="lg">最初のやりとりを作成</Button>
-            </Link>
-          }
-        />
-      ) : (
-        <div className="space-y-4">
-          {filteredInteractions.map((interaction) => (
-            <InteractionCard 
-              key={interaction.id} 
-              interaction={interaction} 
-              onDeleted={handleInteractionDeleted}
-            />
-          ))}
-        </div>
-      )}
-    </PageLayout>
+          {/* フィルタ */}
+          <FilterComponent 
+            currentFilter={filter} 
+            onFilterChange={handleFilterChange}
+          />
+        </header>
+
+        {/* コンテンツ */}
+        {filteredInteractions.length === 0 ? (
+          <EmptyStateCard
+            icon="💬"
+            title={
+              filter.project || filter.engineer || filter.isRead !== undefined 
+                ? "条件に一致するやりとりがありません" 
+                : "やりとりが登録されていません"
+            }
+            description={
+              filter.project || filter.engineer || filter.isRead !== undefined 
+                ? "フィルタ条件を変更してください。" 
+                : "まだやりとりが登録されていません。新しいやりとりを作成してください。"
+            }
+            action={
+              <PermissionGuard permissions={[Permission.INTERACTION_CREATE]}>
+                <Link href="/interactions/new">
+                  <Button size="lg">最初のやりとりを作成</Button>
+                </Link>
+              </PermissionGuard>
+            }
+          />
+        ) : (
+          <div className="space-y-4">
+            {filteredInteractions.map((interaction) => (
+              <InteractionCard 
+                key={interaction.id} 
+                interaction={interaction} 
+                onDeleted={handleInteractionDeleted}
+              />
+            ))}
+          </div>
+        )}
+      </PageLayout>
+    </PermissionGuard>
   );
 } 
