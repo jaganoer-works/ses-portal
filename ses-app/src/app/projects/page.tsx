@@ -6,6 +6,7 @@ import { ProjectCard } from "./components/ProjectCard";
 import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
 import { Button } from "@/components/ui/Button";
 import { EmptyStateCard } from "@/components/ui/Card";
+import { PageLayout } from "@/components/layout";
 
 export const metadata: Metadata = {
   title: "案件一覧 | SES管理システム",
@@ -46,48 +47,50 @@ export default async function ProjectsPage() {
   }
 
   if (error) {
-    return <ErrorDisplay message={error} />;
+    return (
+      <PageLayout>
+        <ErrorDisplay message={error} />
+      </PageLayout>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-base py-8 px-4">
-      <div className="container mx-auto max-w-6xl">
-        <header className="mb-8">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-accent mb-2">
-                案件一覧
-              </h1>
-              <p className="text-sub">
-                {projects.length}件の案件が登録されています
-              </p>
-            </div>
-            
-            <Link href="/projects/new">
-              <Button>新規登録</Button>
-            </Link>
+    <PageLayout>
+      <header className="mb-8">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-accent mb-2">
+              案件一覧
+            </h1>
+            <p className="text-sub">
+              {projects.length}件の案件が登録されています
+            </p>
           </div>
-        </header>
+          
+          <Link href="/projects/new">
+            <Button>新規登録</Button>
+          </Link>
+        </div>
+      </header>
 
-        {projects.length === 0 ? (
-          <EmptyStateCard
-            icon="📁"
-            title="案件が登録されていません"
-            description="まだ案件が登録されていません。新しい案件を登録してください。"
-            action={
-              <Link href="/projects/new">
-                <Button size="lg">最初の案件を登録</Button>
-              </Link>
-            }
-          />
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
+      {projects.length === 0 ? (
+        <EmptyStateCard
+          icon="📁"
+          title="案件が登録されていません"
+          description="まだ案件が登録されていません。新しい案件を登録してください。"
+          action={
+            <Link href="/projects/new">
+              <Button size="lg">最初の案件を登録</Button>
+            </Link>
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      )}
+    </PageLayout>
   );
 } 
