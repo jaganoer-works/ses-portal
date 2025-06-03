@@ -5,6 +5,7 @@
 
 import React from 'react'
 import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import { usePermissions } from '@/hooks/usePermissions'
 import { Permission } from '@/lib/permissions'
 import {
@@ -58,7 +59,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: false,
+        isSystemAdmin: false,
       })
 
       render(
@@ -101,7 +103,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: false,
+        isSystemAdmin: false,
       })
 
       render(
@@ -146,7 +149,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: true,
         canUpdateUsers: true,
         canDeleteUsers: true,
-        canSystemAdmin: true,
+        canManageUsers: true,
+        isSystemAdmin: true,
       })
 
       render(
@@ -189,7 +193,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -236,7 +241,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: true,
         canUpdateUsers: true,
         canDeleteUsers: true,
-        canSystemAdmin: true,
+        canManageUsers: true,
+        isSystemAdmin: true,
       })
 
       render(
@@ -282,7 +288,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -328,7 +335,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -379,7 +387,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       const permissions = [Permission.PROJECT_CREATE, Permission.PROJECT_DELETE]
@@ -426,7 +435,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: true,
         canUpdateUsers: true,
         canDeleteUsers: true,
-        canSystemAdmin: true,
+        canManageUsers: true,
+        isSystemAdmin: true,
       })
 
       const permissions = [Permission.PROJECT_CREATE, Permission.PROJECT_DELETE]
@@ -475,7 +485,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -519,7 +530,8 @@ describe('PermissionGuard', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -573,7 +585,8 @@ describe('ラッパーコンポーネント', () => {
         canCreateUsers: true,
         canUpdateUsers: true,
         canDeleteUsers: true,
-        canSystemAdmin: true,
+        canManageUsers: true,
+        isSystemAdmin: true,
       })
 
       render(
@@ -616,7 +629,8 @@ describe('ラッパーコンポーネント', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -665,7 +679,8 @@ describe('ラッパーコンポーネント', () => {
         canCreateUsers: role === 'admin',
         canUpdateUsers: role === 'admin' || role === 'engineer',
         canDeleteUsers: role === 'admin',
-        canSystemAdmin: role === 'admin',
+        canManageUsers: true,
+        isSystemAdmin: role === 'admin',
       })
 
       render(
@@ -715,7 +730,8 @@ describe('ラッパーコンポーネント', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
@@ -761,7 +777,8 @@ describe('ラッパーコンポーネント', () => {
         canCreateUsers: false,
         canUpdateUsers: false,
         canDeleteUsers: false,
-        canSystemAdmin: false,
+        canManageUsers: true,
+        isSystemAdmin: false,
       })
 
       render(
