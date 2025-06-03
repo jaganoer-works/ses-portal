@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 
 export interface UseFormOptions<T> {
   initialValues: T;
@@ -41,6 +41,10 @@ export function useForm<T extends Record<string, any>>({
   const [touched, setTouchedState] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Refを使用して最新の状態への参照を維持
+  const errorsRef = useRef(errors);
+  errorsRef.current = errors;
+
   const isValid = useMemo(() => {
     return Object.keys(errors).length === 0;
   }, [errors]);
@@ -48,19 +52,19 @@ export function useForm<T extends Record<string, any>>({
   const setValue = useCallback((name: keyof T, value: any) => {
     setValues(prev => ({ ...prev, [name]: value }));
     
-    // 値が変更されたらエラーをクリア
-    if (errors[name as string]) {
+    // 現在のエラー状態をRefから取得（依存配列に含めない）
+    if (errorsRef.current[name as string]) {
       setErrors(prev => {
         const newErrors = { ...prev };
         delete newErrors[name as string];
         return newErrors;
       });
     }
-  }, [errors]);
+  }, []); // 依存配列を空にして安定化
 
   const setError = useCallback((name: keyof T, error: string) => {
     setErrors(prev => ({ ...prev, [name as string]: error }));
-  }, []);
+  }, []); // 依存配列を空にして安定化
 
   const setTouched = useCallback((name: keyof T, touched = true) => {
     setTouchedState(prev => ({ ...prev, [name as string]: touched }));
@@ -69,27 +73,37 @@ export function useForm<T extends Record<string, any>>({
   const validateField = useCallback((name: keyof T) => {
     if (!validate) return;
     
-    const fieldErrors = validate(values);
-    const fieldError = fieldErrors[name as string];
-    
-    if (fieldError) {
-      setError(name, fieldError);
-    } else {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name as string];
-        return newErrors;
-      });
-    }
-  }, [values, validate, setError]);
+    setValues(currentValues => {
+      const fieldErrors = validate(currentValues);
+      const fieldError = fieldErrors[name as string];
+      
+      if (fieldError) {
+        setErrors(prev => ({ ...prev, [name as string]: fieldError }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name as string];
+          return newErrors;
+        });
+      }
+      
+      return currentValues; // 値は変更しない
+    });
+  }, [validate]);
 
   const validateForm = useCallback(() => {
     if (!validate) return true;
     
-    const formErrors = validate(values);
-    setErrors(formErrors);
-    return Object.keys(formErrors).length === 0;
-  }, [values, validate]);
+    let isFormValid = true;
+    setValues(currentValues => {
+      const formErrors = validate(currentValues);
+      setErrors(formErrors);
+      isFormValid = Object.keys(formErrors).length === 0;
+      return currentValues; // 値は変更しない
+    });
+    
+    return isFormValid;
+  }, [validate]);
 
   const handleChange = useCallback((
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -200,31 +214,40 @@ export const validators = {
     return undefined;
   },
   
-  pattern: (regex: RegExp, message = "入力形式が正しくありません") => (value: string) => {
+  pattern: (regex: RegExp, message?: string) => (value: string) => {
     if (value && !regex.test(value)) {
+      return message || "形式が正しくありません";
+    }
+    return undefined;
+  },
+  
+  number: (message = "数値を入力してください") => (value: any) => {
+    if (value !== "" && value !== null && value !== undefined && isNaN(Number(value))) {
       return message;
     }
     return undefined;
   },
   
-  min: (min: number, message?: string) => (value: number) => {
-    if (value !== null && value !== undefined && value < min) {
-      return message || `${min}以上の数値を入力してください`;
+  min: (minValue: number, message?: string) => (value: any) => {
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue < minValue) {
+      return message || `${minValue}以上の値を入力してください`;
     }
     return undefined;
   },
   
-  max: (max: number, message?: string) => (value: number) => {
-    if (value !== null && value !== undefined && value > max) {
-      return message || `${max}以下の数値を入力してください`;
+  max: (maxValue: number, message?: string) => (value: any) => {
+    const numValue = Number(value);
+    if (!isNaN(numValue) && numValue > maxValue) {
+      return message || `${maxValue}以下の値を入力してください`;
     }
     return undefined;
   },
 };
 
-// 複数のバリデーション関数を組み合わせるヘルパー
+// 複数のバリデーションを組み合わせる関数
 export function combineValidators<T>(...validators: Array<(value: T) => string | undefined>) {
-  return (value: T) => {
+  return (value: T): string | undefined => {
     for (const validator of validators) {
       const error = validator(value);
       if (error) return error;

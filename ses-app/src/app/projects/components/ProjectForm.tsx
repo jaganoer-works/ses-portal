@@ -94,6 +94,7 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify(submitData),
       });
 
@@ -123,7 +124,7 @@ export function ProjectForm({ mode, initialData }: ProjectFormProps) {
       form.setValue("status", initialData.status);
       form.setValue("published", initialData.published);
     }
-  }, [mode, initialData, form]);
+  }, [mode, initialData, form.setValue]);
 
   const handleCancel = () => {
     if (mode === "edit" && initialData) {
