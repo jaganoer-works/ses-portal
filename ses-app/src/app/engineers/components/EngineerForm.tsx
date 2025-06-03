@@ -80,8 +80,8 @@ export function EngineerForm({ initialData, mode, engineerId }: EngineerFormProp
 
     try {
       const url = mode === "create" 
-        ? "/api/users" 
-        : `/api/users/${engineerId}`;
+        ? "/api/engineers" 
+        : `/api/engineers/${engineerId}`;
       
       const method = mode === "create" ? "POST" : "PUT";
 

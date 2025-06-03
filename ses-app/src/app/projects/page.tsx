@@ -1,20 +1,21 @@
-import React from "react";
-import { Metadata } from "next";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ProjectListItem } from "@/lib/types/project";
 import { ProjectCard } from "./components/ProjectCard";
-import { ErrorDisplay } from "./components/ErrorBoundary";
-
-export const metadata: Metadata = {
-  title: "案件一覧 | SES管理システム",
-  description: "SES管理システムの案件一覧ページです。案件の詳細、期間、単価などを確認できます。",
-};
+import { ErrorDisplay } from "@/components/ui/ErrorDisplay";
+import { Loading } from "@/components/ui/Loading";
+import { Button } from "@/components/ui/Button";
+import { EmptyStateCard } from "@/components/ui/Card";
+import { PageLayout } from "@/components/layout";
+import { PermissionGuard, SalesOrHigher } from "@/components/auth/PermissionGuard";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Permission } from "@/lib/permissions";
 
 async function fetchProjects(): Promise<ProjectListItem[]> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  
   try {
-    const res = await fetch(`${baseUrl}/api/projects`, { 
+    const res = await fetch("/api/projects", { 
       cache: "no-store",
       headers: {
         'Content-Type': 'application/json',
@@ -33,23 +34,67 @@ async function fetchProjects(): Promise<ProjectListItem[]> {
   }
 }
 
-export default async function ProjectsPage() {
-  let projects: ProjectListItem[] = [];
-  let error: string | null = null;
+export default function ProjectsPage() {
+  const [projects, setProjects] = useState<ProjectListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { isAuthenticated, canReadProjects } = usePermissions();
 
-  try {
-    projects = await fetchProjects();
-  } catch (e) {
-    error = e instanceof Error ? e.message : "案件データの取得に失敗しました";
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // 認証チェック
+        if (!isAuthenticated) {
+          setError("認証が必要です");
+          return;
+        }
+        
+        // 権限チェック
+        if (!canReadProjects) {
+          setError("案件を閲覧する権限がありません");
+          return;
+        }
+        
+        const data = await fetchProjects();
+        setProjects(data);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "案件データの取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // 認証状態が確定してからAPI呼び出し
+    if (isAuthenticated !== undefined) {
+      loadProjects();
+    }
+  }, [isAuthenticated]); // 認証状態のみを依存関係にする
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-12">
+          <Loading variant="dots" size="lg" />
+          <p className="text-sub mt-4">案件データを読み込み中...</p>
+        </div>
+      </PageLayout>
+    );
   }
 
   if (error) {
-    return <ErrorDisplay message={error} />;
+    return (
+      <PageLayout>
+        <ErrorDisplay message={error} />
+      </PageLayout>
+    );
   }
 
   return (
-    <main className="min-h-screen bg-base py-8 px-4">
-      <div className="container mx-auto max-w-6xl">
+    <PermissionGuard permissions={[Permission.PROJECT_READ]}>
+      <PageLayout>
         <header className="mb-8">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -61,31 +106,27 @@ export default async function ProjectsPage() {
               </p>
             </div>
             
-            <Link
-              href="/projects/new"
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              新規登録
-            </Link>
+            <SalesOrHigher>
+              <Link href="/projects/new">
+                <Button>新規登録</Button>
+              </Link>
+            </SalesOrHigher>
           </div>
         </header>
 
         {projects.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-4">📁</div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              案件が登録されていません
-            </h2>
-            <p className="text-sub mb-6">
-              まだ案件が登録されていません。新しい案件を登録してください。
-            </p>
-            <Link
-              href="/projects/new"
-              className="inline-flex px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              最初の案件を登録
-            </Link>
-          </div>
+          <EmptyStateCard
+            icon="📁"
+            title="案件が登録されていません"
+            description="まだ案件が登録されていません。新しい案件を登録してください。"
+            action={
+              <SalesOrHigher>
+                <Link href="/projects/new">
+                  <Button size="lg">最初の案件を登録</Button>
+                </Link>
+              </SalesOrHigher>
+            }
+          />
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {projects.map((project) => (
@@ -93,7 +134,7 @@ export default async function ProjectsPage() {
             ))}
           </div>
         )}
-      </div>
-    </main>
+      </PageLayout>
+    </PermissionGuard>
   );
 } 

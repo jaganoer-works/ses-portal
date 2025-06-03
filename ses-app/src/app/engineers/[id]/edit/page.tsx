@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Engineer } from "@/lib/types/user";
 import { EngineerForm } from "../../components/EngineerForm";
+import { apiFetch } from "@/lib/api/fetchService";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -17,22 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 async function fetchEngineer(id: string): Promise<Engineer | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  
-  try {
-    const res = await fetch(`${baseUrl}/api/users/${id}`, { 
-      cache: "no-store",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!res.ok) return null;
-    return res.json();
-  } catch (error) {
-    console.error("技術者データ取得エラー:", error);
-    return null;
-  }
+  return apiFetch<Engineer>(`/api/engineers/${id}`);
 }
 
 export default async function EditEngineerPage({ params }: Props) {

@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -14,11 +16,61 @@ async function main() {
   });
   const skillRecords = await prisma.skill.findMany();
 
-  // User
+  // パスワードのハッシュ化
+  const defaultPassword = await bcrypt.hash('password123', 12);
+  const adminPassword = await bcrypt.hash('admin123', 12);
+
+  // User（認証用管理者ユーザー）
+  const adminUser = await prisma.user.create({
+    data: {
+      name: '管理 太郎',
+      email: 'admin@example.com',
+      password: adminPassword,
+      desiredPrice: 0,
+      availableFrom: new Date(),
+      description: 'システム管理者',
+      status: 'active',
+      role: 'admin',
+      isAvailable: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      skills: {
+        create: [
+          { skill: { connect: { name: 'SQL' } } },
+          { skill: { connect: { name: 'AWS' } } }
+        ]
+      }
+    }
+  });
+
+  // User（営業ユーザー）
+  const salesUser = await prisma.user.create({
+    data: {
+      name: '営業 花子',
+      email: 'sales@example.com',
+      password: defaultPassword,
+      desiredPrice: 0,
+      availableFrom: new Date(),
+      description: '営業担当者',
+      status: 'active',
+      role: 'sales',
+      isAvailable: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isActive: true,
+      skills: {
+        create: []
+      }
+    }
+  });
+
+  // User（技術者ユーザー）
   const user1 = await prisma.user.create({
     data: {
       name: '山田 太郎',
       email: 'taro@example.com',
+      password: defaultPassword,
       desiredPrice: 600000,
       availableFrom: new Date(),
       description: 'フロントエンドエンジニア',
@@ -40,6 +92,7 @@ async function main() {
     data: {
       name: '佐藤 花子',
       email: 'hanako@example.com',
+      password: defaultPassword,
       desiredPrice: 800000,
       availableFrom: new Date(),
       description: 'バックエンド・Python/AWSエンジニア',
@@ -52,27 +105,6 @@ async function main() {
       skills: {
         create: [
           { skill: { connect: { name: 'Python' } } },
-          { skill: { connect: { name: 'AWS' } } }
-        ]
-      }
-    }
-  });
-  const user3 = await prisma.user.create({
-    data: {
-      name: '管理 太郎',
-      email: 'admin@example.com',
-      desiredPrice: 0,
-      availableFrom: new Date(),
-      description: '管理者・営業',
-      status: 'active',
-      role: 'admin',
-      isAvailable: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isActive: true,
-      skills: {
-        create: [
-          { skill: { connect: { name: 'SQL' } } },
           { skill: { connect: { name: 'AWS' } } }
         ]
       }
@@ -146,9 +178,9 @@ async function main() {
       },
       {
         projectId: project2.id,
-        engineerId: user3.id,
-        message: '管理者からの連絡',
-        progress: '管理対応',
+        engineerId: salesUser.id,
+        message: '営業からの連絡',
+        progress: '営業対応',
         isRead: false,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -156,6 +188,11 @@ async function main() {
       }
     ]
   });
+
+  console.log('🌱 Seed data created successfully!');
+  console.log('👤 Admin user: admin@example.com / admin123');
+  console.log('👤 Sales user: sales@example.com / password123');
+  console.log('👤 Engineer users: taro@example.com, hanako@example.com / password123');
 }
 
 main()

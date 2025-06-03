@@ -1,47 +1,105 @@
-import React from "react";
-import { Metadata } from "next";
-import { notFound } from "next/navigation";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Engineer } from "@/lib/types/user";
+import { apiFetch } from "@/lib/api/fetchService";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Permission } from "@/lib/permissions";
 
-type Props = {
-  params: Promise<{ id: string }>;
-};
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
-  const engineer = await fetchEngineer(id);
-  return {
-    title: engineer ? `${engineer.name} | 技術者詳細` : "技術者詳細",
-    description: engineer ? `${engineer.name}さんの詳細情報` : "技術者の詳細情報",
-  };
-}
-
-async function fetchEngineer(id: string): Promise<Engineer | null> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+export default function EngineerDetailPage() {
+  const params = useParams();
+  const router = useRouter();
+  const id = params.id as string;
+  const [engineer, setEngineer] = useState<Engineer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
-  try {
-    const res = await fetch(`${baseUrl}/api/users/${id}`, { 
-      cache: "no-store",
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!res.ok) return null;
-    return res.json();
-  } catch (error) {
-    console.error("技術者データ取得エラー:", error);
-    return null;
+  const { canReadEngineers, canAccess, userId, isAuthenticated } = usePermissions();
+
+  useEffect(() => {
+    async function fetchEngineer() {
+      if (!isAuthenticated) {
+        router.push('/auth/signin');
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const data = await apiFetch<Engineer>(`/api/engineers/${id}`);
+        
+        if (!data) {
+          setError("技術者が見つかりません");
+          return;
+        }
+
+        // エンジニアは自分の情報のみ閲覧可能
+        if (!canReadEngineers && !canAccess(Permission.ENGINEER_READ, data.id)) {
+          setError("この技術者の情報を表示する権限がありません");
+          return;
+        }
+
+        setEngineer(data);
+      } catch (err) {
+        console.error("Engineer fetch error:", err);
+        setError("技術者情報の取得に失敗しました");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchEngineer();
+  }, [id, canReadEngineers, canAccess, userId, isAuthenticated, router]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-base flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-main">読み込み中...</span>
+        </div>
+      </main>
+    );
   }
-}
 
-export default async function EngineerDetailPage({ params }: Props) {
-  const { id } = await params;
-  const engineer = await fetchEngineer(id);
-  
+  if (error) {
+    return (
+      <main className="min-h-screen bg-base py-8 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">エラー</h1>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <Link 
+              href="/engineers" 
+              className="text-accent hover:text-accent-dark transition-colors"
+            >
+              ← 技術者一覧に戻る
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (!engineer) {
-    return notFound();
+    return (
+      <main className="min-h-screen bg-base py-8 px-4">
+        <div className="container mx-auto max-w-4xl">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-600 mb-4">技術者が見つかりません</h1>
+            <Link 
+              href="/engineers" 
+              className="text-accent hover:text-accent-dark transition-colors"
+            >
+              ← 技術者一覧に戻る
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   const formatDate = (dateString: string | null) => {
@@ -58,7 +116,7 @@ export default async function EngineerDetailPage({ params }: Props) {
     return `${price.toLocaleString()}円`;
   };
 
-  const skillNames = engineer.skills.map(s => s.skill.name).join(", ") || "-";
+  const skillNames = engineer.skills?.map(s => s.skill.name).join(", ") || "-";
 
   return (
     <main className="min-h-screen bg-base py-8 px-4">
@@ -83,12 +141,14 @@ export default async function EngineerDetailPage({ params }: Props) {
               </p>
             </div>
             
-            <Link
-              href={`/engineers/${id}/edit`}
-              className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-            >
-              編集
-            </Link>
+            {(canAccess(Permission.ENGINEER_UPDATE, engineer.id)) && (
+              <Link
+                href={`/engineers/${id}/edit`}
+                className="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+              >
+                編集
+              </Link>
+            )}
           </div>
         </header>
 
@@ -149,7 +209,7 @@ export default async function EngineerDetailPage({ params }: Props) {
             <div className="bg-card border border-gray-200 rounded-xl p-6">
               <h2 className="text-lg font-semibold text-accent-dark mb-4">スキル</h2>
               
-              {engineer.skills.length > 0 ? (
+              {engineer.skills && engineer.skills.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {engineer.skills.map((skillItem, index) => (
                     <span
