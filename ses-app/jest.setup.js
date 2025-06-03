@@ -47,4 +47,75 @@ jest.mock('next-auth/react', () => ({
 }))
 
 // fetchのポリフィル（Node.js環境用）
-// global.fetch = require('node-fetch') 
+// global.fetch = require('node-fetch')
+
+// Node.js環境でのRequest APIポリフィル
+global.Request = class Request {
+  constructor(url, options = {}) {
+    this.url = url;
+    this.method = options.method || 'GET';
+    this.headers = new Map(Object.entries(options.headers || {}));
+    this.body = options.body;
+  }
+
+  json() {
+    return Promise.resolve(JSON.parse(this.body || '{}'));
+  }
+};
+
+// Response APIポリフィル
+global.Response = class Response {
+  constructor(body, options = {}) {
+    this.body = body;
+    this.status = options.status || 200;
+    this.statusText = options.statusText || 'OK';
+    this.headers = new Map(Object.entries(options.headers || {}));
+  }
+
+  json() {
+    return Promise.resolve(JSON.parse(this.body || '{}'));
+  }
+
+  static json(data, options = {}) {
+    return new Response(JSON.stringify(data), {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+  }
+};
+
+// NextResponse のモック
+global.NextResponse = {
+  json: (data, options = {}) => ({
+    status: options.status || 200,
+    json: () => Promise.resolve(data),
+  }),
+  redirect: (url) => ({
+    status: 302,
+    headers: { Location: url },
+  }),
+  next: () => ({
+    status: 200,
+  }),
+};
+
+// console.error のモック（テスト中のエラーログを抑制）
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Warning: ReactDOM.render is deprecated')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
+});
+
+afterAll(() => {
+  console.error = originalError;
+}); 
