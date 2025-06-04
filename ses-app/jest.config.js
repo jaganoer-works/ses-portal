@@ -25,6 +25,8 @@ const config = {
     '<rootDir>/node_modules/',
     '<rootDir>/cypress/',
     '<rootDir>/e2e/',
+    // テンプレートファイルをテスト対象から除外
+    '<rootDir>/src/__tests__/templates/',
   ],
   // ESMモジュールのトランスパイル設定
   transformIgnorePatterns: [
@@ -38,6 +40,7 @@ const config = {
     '!src/app/**/not-found.tsx',
     '!src/app/**/error.tsx',
     '!src/app/**/page.tsx', // 統合テストで別途テスト
+    '!src/__tests__/templates/**', // テンプレートファイルをカバレッジから除外
   ],
   coverageThreshold: {
     global: {
