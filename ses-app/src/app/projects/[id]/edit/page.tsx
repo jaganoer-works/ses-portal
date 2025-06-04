@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Project } from "@/lib/types/project";
 import { ProjectForm } from "../../components/ProjectForm";
 import { ErrorDisplay } from "../../components/ErrorBoundary";
+import { prisma } from "@/lib/prisma";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -27,28 +28,27 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 async function fetchProject(id: string): Promise<Project> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  
   try {
-    const res = await fetch(`${baseUrl}/api/projects/${id}`, { 
-      cache: "no-store",
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const project = await prisma.project.findUnique({
+      where: { id }
     });
     
-    if (!res.ok) {
-      if (res.status === 404) {
-        notFound();
-      }
-      throw new Error(`HTTP ${res.status}: 案件データの取得に失敗しました`);
+    if (!project) {
+      notFound();
     }
     
-    const data = await res.json();
-    return data;
+    return {
+      ...project,
+      periodStart: project.periodStart.toISOString().split('T')[0],
+      periodEnd: project.periodEnd.toISOString().split('T')[0],
+      createdAt: project.createdAt.toISOString(),
+      updatedAt: project.updatedAt.toISOString(),
+      publishedAt: project.publishedAt?.toISOString() || null,
+      lastContactedAt: project.lastContactedAt?.toISOString() || null,
+    } as Project;
   } catch (error) {
     console.error("案件データ取得エラー:", error);
-    throw error;
+    throw new Error("案件データの取得に失敗しました");
   }
 }
 
