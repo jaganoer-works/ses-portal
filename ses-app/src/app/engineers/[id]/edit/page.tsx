@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Engineer } from "@/lib/types/user";
 import { EngineerForm } from "../../components/EngineerForm";
-import { apiFetch } from "@/lib/api/fetchService";
+import { prisma } from "@/lib/prisma";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -11,20 +11,63 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  return {
-    title: "技術者編集 | SES管理システム",
-    description: `技術者（ID: ${id}）の情報を編集します。`,
-  };
+  
+  try {
+    const engineer = await fetchEngineer(id);
+    return {
+      title: `${engineer?.name}を編集 | SES管理システム`,
+      description: `技術者「${engineer?.name}」の情報を編集します。`,
+    };
+  } catch {
+    return {
+      title: "技術者編集 | SES管理システム",
+      description: "技術者の情報を編集できます。",
+    };
+  }
 }
 
 async function fetchEngineer(id: string): Promise<Engineer | null> {
-  return apiFetch<Engineer>(`/api/engineers/${id}`);
+  try {
+    const engineer = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        skills: {
+          include: {
+            skill: true,
+          },
+        },
+      },
+    });
+    
+    if (!engineer) {
+      notFound();
+    }
+    
+    // PrismaのDate型をstring型に変換してEngineer型に適合させる
+    return {
+      ...engineer,
+      availableFrom: engineer.availableFrom?.toISOString().split('T')[0] || null,
+      createdAt: engineer.createdAt.toISOString(),
+      updatedAt: engineer.updatedAt.toISOString(),
+    } as Engineer;
+  } catch (error) {
+    console.error("技術者データ取得エラー:", error);
+    throw new Error("技術者データの取得に失敗しました");
+  }
 }
 
 export default async function EditEngineerPage({ params }: Props) {
   const { id } = await params;
-  const engineer = await fetchEngineer(id);
   
+  let engineer: Engineer | null;
+  
+  try {
+    engineer = await fetchEngineer(id);
+  } catch (error) {
+    // エラー時は404ページを表示
+    return notFound();
+  }
+
   if (!engineer) {
     return notFound();
   }
